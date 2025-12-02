@@ -11,7 +11,8 @@ export default function Index() {
   // Example of how to fetch data from the server (if needed)
   const fetchDemo = async () => {
     try {
-      const response = await fetch("/api/demo");
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+      const response = await fetch(`${baseUrl}/api/demo`);
       const data = (await response.json()) as DemoResponse;
       setExampleFromServer(data.message);
     } catch (error) {

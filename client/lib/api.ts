@@ -41,6 +41,26 @@ export interface TTSResponse {
   audio_url: string;
 }
 
+export interface LearningTTSResult {
+  audioUrl: string;
+  audioId: string;
+  s3Url?: string;
+  localPath?: string;
+  videoUrl?: string | null;
+  videoFilename?: string | null;
+  videoError?: string;
+}
+
+export interface LipsyncVideoResponse {
+  video_url: string | null;
+  folder?: string;
+  video_filename?: string;
+  audio_key?: string | null;
+  audio_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface ReferenceLink {
   title: string;
   url: string;
@@ -52,6 +72,18 @@ class ApiService {
 
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL;
+  }
+
+  private toAbsoluteUrl(url?: string | null): string | null {
+    if (!url) {
+      return null;
+    }
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    const normalizedBase = this.baseURL.replace(/\/$/, '');
+    const normalizedPath = url.startsWith('/') ? url : `/${url}`;
+    return `${normalizedBase}${normalizedPath}`;
   }
 
   // Upload file
@@ -189,13 +221,21 @@ class ApiService {
   }
 
   // Text-to-Speech for learning
-  async learningTTS(text: string): Promise<string> {
+  async learningTTS(text?: string, fileName?: string): Promise<LearningTTSResult> {
+    const requestBody: any = {};
+    if (text) {
+      requestBody.text = text;
+    }
+    if (fileName) {
+      requestBody.fileName = fileName;
+    }
+    
     const response = await fetch(`${this.baseURL}/api/learning-tts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -203,8 +243,32 @@ class ApiService {
       throw new Error(errorData.error || 'TTS failed');
     }
 
-    const data: TTSResponse = await response.json();
-    return data.audio_url;
+    const data = await response.json();
+    const rawAudioUrl: string | undefined = data.audio_url;
+    const absoluteAudioUrl =
+      rawAudioUrl && rawAudioUrl.startsWith('/')
+        ? `${this.baseURL}${rawAudioUrl}`
+        : rawAudioUrl || (data.audioId ? `${this.baseURL}/api/tts-audio/${data.audioId}` : undefined);
+
+    if (!absoluteAudioUrl) {
+      throw new Error('No audio URL or audioId in response');
+    }
+
+    const result: LearningTTSResult = {
+      audioUrl: absoluteAudioUrl,
+      audioId: data.audioId,
+      s3Url: data.s3_url,
+      localPath: data.local_path,
+    };
+
+    if (data.video) {
+      const videoUrlRaw = data.video.video_url || data.video.videoUrl;
+      result.videoUrl = this.toAbsoluteUrl(videoUrlRaw);
+      result.videoFilename = data.video.video_filename || data.video.videoFilename;
+      result.videoError = data.video.error;
+    }
+
+    return result;
   }
 
   // Text-to-Speech for Q&A
@@ -242,6 +306,43 @@ class ApiService {
     }
 
     return response.json();
+  }
+
+  async getLatestLipsyncVideo(fileName?: string): Promise<LipsyncVideoResponse> {
+    const params = new URLSearchParams();
+    if (fileName) {
+      params.append('fileName', fileName);
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await fetch(`${this.baseURL}/api/lipsync/latest${query}`);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || 'Failed to load lipsync video');
+    }
+
+    const data: LipsyncVideoResponse = await response.json();
+    data.video_url = this.toAbsoluteUrl(data.video_url);
+    return data;
+  }
+
+  async generateLipsyncVideo(fileName?: string): Promise<LipsyncVideoResponse> {
+    const response = await fetch(`${this.baseURL}/api/lipsync/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(fileName ? { fileName } : {}),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to generate lipsync video');
+    }
+
+    const data: LipsyncVideoResponse = await response.json();
+    data.video_url = this.toAbsoluteUrl(data.video_url);
+    return data;
   }
 
   // Check processing status

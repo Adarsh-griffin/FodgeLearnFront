@@ -5,6 +5,14 @@ import { apiService, UploadResponse, QAResponse, ReferenceLink, ProcessingStatus
 
 type AssessmentState = 'welcome' | 'question' | 'answer' | 'feedback';
 
+type AutoPipelineState = {
+  file?: string;
+  running: boolean;
+  error?: string;
+  summaryHash?: string;
+  attempted: boolean;
+};
+
 const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "upload" | "learning" | "assessment") => void, navigate: (path: string | number) => void }) => {
   const [currentState, setCurrentState] = useState<AssessmentState>('welcome');
   const [question, setQuestion] = useState<string>('');
@@ -743,6 +751,16 @@ export function StudyPage() {
     const [linksLoading, setLinksLoading] = useState(false);
     const [summaryText, setSummaryText] = useState<string>('');
     const [textLoading, setTextLoading] = useState(false);
+    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [videoLoading, setVideoLoading] = useState(false);
+    const [videoError, setVideoError] = useState<string | null>(null);
+    const [autoPipelineStatus, setAutoPipelineStatus] = useState<AutoPipelineState>({
+      running: false,
+      attempted: false
+    });
+    const summaryHashValue = summaryText && summaryText.trim().length > 0
+      ? `${summaryText.length}-${summaryText.slice(0, 64)}`
+      : undefined;
     
     // Chat functionality
     const [chatMessages, setChatMessages] = useState<Array<{id: string, type: 'user' | 'bot', content: string, timestamp: Date}>>(() => {
@@ -905,6 +923,132 @@ export function StudyPage() {
       
       loadAvailableFiles();
     }, [selectedFile]);
+
+    const loadLatestVideo = useCallback(async (targetFile?: string) => {
+      const fileName = targetFile || selectedFile || availableFiles[0];
+      if (!fileName) {
+        setVideoUrl(null);
+        setVideoError(null);
+        return;
+      }
+      setVideoLoading(true);
+      setVideoError(null);
+      try {
+        const response = await apiService.getLatestLipsyncVideo(fileName);
+        if (response.video_url) {
+          setVideoUrl(response.video_url);
+        } else {
+          setVideoUrl(null);
+          setVideoError('No lipsync video available yet. Generate one to get started.');
+        }
+      } catch (error) {
+        console.error('Failed to load latest video:', error);
+        setVideoUrl(null);
+        setVideoError(error instanceof Error ? error.message : 'Failed to load video');
+      } finally {
+        setVideoLoading(false);
+      }
+    }, [selectedFile, availableFiles]);
+
+    useEffect(() => {
+      loadLatestVideo(selectedFile);
+    }, [selectedFile, loadLatestVideo]);
+
+    const triggerAutoPipeline = useCallback(
+      async (targetFile?: string, targetSummary?: string, targetSummaryHash?: string) => {
+        const fileName = targetFile || selectedFile || availableFiles[0];
+        if (!fileName || !targetSummary || !targetSummary.trim()) {
+          return;
+        }
+        setAutoPipelineStatus({
+          running: true,
+          file: fileName,
+          error: undefined,
+          summaryHash: targetSummaryHash,
+          attempted: false
+        });
+        setVideoLoading(true);
+        try {
+          const ttsResult = await apiService.learningTTS(targetSummary, fileName);
+          setAutoPipelineStatus({
+            running: false,
+            file: fileName,
+            error: undefined,
+            summaryHash: targetSummaryHash,
+            attempted: true
+          });
+          if (ttsResult.videoUrl) {
+            setVideoUrl(ttsResult.videoUrl);
+            setVideoError(null);
+          } else if (ttsResult.videoError) {
+            setVideoError(ttsResult.videoError);
+          } else {
+            await loadLatestVideo(fileName);
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to auto-generate audio/video';
+          setAutoPipelineStatus({
+            running: false,
+            file: fileName,
+            error: message,
+            summaryHash: targetSummaryHash,
+            attempted: true
+          });
+          setVideoError(message);
+        } finally {
+          setVideoLoading(false);
+        }
+      },
+      [availableFiles, loadLatestVideo, selectedFile]
+    );
+
+    useEffect(() => {
+      const fileName = selectedFile || availableFiles[0];
+      if (!fileName || !summaryHashValue) {
+        return;
+      }
+      if (autoPipelineStatus.running) {
+        return;
+      }
+      if (
+        autoPipelineStatus.file === fileName &&
+        autoPipelineStatus.summaryHash === summaryHashValue &&
+        autoPipelineStatus.attempted
+      ) {
+        return;
+      }
+      triggerAutoPipeline(fileName, summaryText, summaryHashValue);
+    }, [summaryHashValue, summaryText, selectedFile, availableFiles, autoPipelineStatus, triggerAutoPipeline]);
+
+    const handleRefreshVideo = async () => {
+      await loadLatestVideo(selectedFile);
+    };
+
+    const handleGenerateVideo = async () => {
+      const fileName = selectedFile || availableFiles[0];
+      if (!fileName) {
+        setVideoError('Upload and select a document to generate a video.');
+        return;
+      }
+      setVideoLoading(true);
+      setVideoError(null);
+      try {
+        await apiService.generateLipsyncVideo(fileName);
+        await loadLatestVideo(fileName);
+        setAutoPipelineStatus({
+          running: false,
+          file: fileName,
+          error: undefined,
+          summaryHash: summaryHashValue,
+          attempted: true
+        });
+      } catch (error) {
+        console.error('Failed to generate lipsync video:', error);
+        setVideoError(error instanceof Error ? error.message : 'Failed to generate lipsync video');
+      } finally {
+        setVideoLoading(false);
+      }
+    };
 
     // Update bot message when file selection changes
     useEffect(() => {
@@ -1185,15 +1329,60 @@ export function StudyPage() {
               <div className="flex-1 bg-blue-50 flex flex-col min-h-0">
                 {/* Video Section - Fixed at top */}
                 <div className="p-4 pb-2 bg-blue-50 flex-shrink-0">
-                  <div className="bg-gray-100 rounded-lg aspect-video flex items-center justify-center">
-                    <div className="text-gray-500 text-center">
-                      <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <span className="text-2xl">▶</span>
-                      </div>
-                      <p className="text-sm">Video will appear here</p>
-                      <p className="text-xs text-gray-400">Upload a document to get started</p>
+                  <div className="flex items-center justify-between mb-3">
+                    <h5 className="font-semibold text-gray-800">Video Explanation</h5>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleRefreshVideo}
+                        disabled={videoLoading}
+                        className="text-xs px-2 py-1 bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors disabled:opacity-50"
+                      >
+                        Refresh
+                      </button>
+                      <button
+                        onClick={handleGenerateVideo}
+                        disabled={videoLoading}
+                        className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        {videoLoading ? 'Working...' : 'Generate'}
+                      </button>
                     </div>
                   </div>
+                  <div className="bg-gray-100 rounded-lg aspect-video flex items-center justify-center overflow-hidden">
+                    {videoLoading ? (
+                      <div className="flex flex-col items-center text-gray-500">
+                        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+                        <p className="text-sm">Preparing your video...</p>
+                      </div>
+                    ) : videoUrl ? (
+                      <video
+                        key={videoUrl}
+                        src={videoUrl}
+                        controls
+                        autoPlay
+                        muted
+                        loop
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="text-gray-500 text-center">
+                        <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <span className="text-2xl">▶</span>
+                        </div>
+                        <p className="text-sm">Video will appear here</p>
+                        <p className="text-xs text-gray-400">Generate a lipsync video to get started</p>
+                      </div>
+                    )}
+                  </div>
+                  {autoPipelineStatus.running && (
+                    <p className="text-xs text-blue-600 mt-2">Auto-generating the latest audio and video...</p>
+                  )}
+                  {autoPipelineStatus.error && (
+                    <p className="text-xs text-red-600 mt-2">{autoPipelineStatus.error}</p>
+                  )}
+                  {videoError && (
+                    <p className="text-xs text-red-600 mt-2">{videoError}</p>
+                  )}
                 </div>
                 
                 {/* Reference Links - Scrollable area */}
@@ -1262,33 +1451,79 @@ export function StudyPage() {
                         <BookOpen size={20} className="text-green-600" />
                         AI Summary
                       </h5>
-                      <button 
-                        onClick={async () => {
-                          setTextLoading(true);
-                          try {
-                            // Clear cache and force fresh fetch
-                            localStorage.removeItem('neurolearn_summary_text');
-                            localStorage.removeItem('neurolearn_text_timestamp');
-                            
-                            const text = await apiService.getText();
-                            console.log('Refreshed text from API:', text);
-                            setSummaryText(text);
-                            
-                            // Cache the new text
-                            const now = Date.now();
-                            localStorage.setItem('neurolearn_summary_text', text);
-                            localStorage.setItem('neurolearn_text_timestamp', now.toString());
-                            console.log('💾 Cached refreshed summary text');
-                          } catch (error) {
-                            console.error('Failed to refresh summary text:', error);
-                          } finally {
-                            setTextLoading(false);
-                          }
-                        }}
-                        className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                      >
-                        Refresh
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={async () => {
+                            if (!summaryText) {
+                              alert('No summary text available. Please wait for the summary to load.');
+                              return;
+                            }
+                            try {
+                              const fileName = selectedFile || availableFiles[0] || undefined;
+                              if (!fileName) {
+                                alert('Select or upload a document first.');
+                                return;
+                              }
+                              const ttsResult = await apiService.learningTTS(summaryText, fileName);
+                              if (ttsResult.audioUrl) {
+                                const audio = new Audio(ttsResult.audioUrl);
+                                audio.play().catch(err => {
+                                  console.error('Error playing audio:', err);
+                                  alert('Failed to play audio. Please try again.');
+                                });
+                              }
+                              if (ttsResult.videoUrl) {
+                                setVideoUrl(ttsResult.videoUrl);
+                                setVideoError(null);
+                              } else if (fileName) {
+                                await loadLatestVideo(fileName);
+                              }
+                              setAutoPipelineStatus({
+                                running: false,
+                                file: fileName,
+                                error: undefined,
+                                summaryHash: summaryHashValue,
+                                attempted: true
+                              });
+                            } catch (error) {
+                              console.error('Failed to generate TTS:', error);
+                              alert(error instanceof Error ? error.message : 'Failed to generate audio. Please try again.');
+                            }
+                          }}
+                          disabled={!summaryText || textLoading}
+                          className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                          title="Play summary as audio"
+                        >
+                          🔊 Play Audio
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            setTextLoading(true);
+                            try {
+                              // Clear cache and force fresh fetch
+                              localStorage.removeItem('neurolearn_summary_text');
+                              localStorage.removeItem('neurolearn_text_timestamp');
+                              
+                              const text = await apiService.getText();
+                              console.log('Refreshed text from API:', text);
+                              setSummaryText(text);
+                              
+                              // Cache the new text
+                              const now = Date.now();
+                              localStorage.setItem('neurolearn_summary_text', text);
+                              localStorage.setItem('neurolearn_text_timestamp', now.toString());
+                              console.log('💾 Cached refreshed summary text');
+                            } catch (error) {
+                              console.error('Failed to refresh summary text:', error);
+                            } finally {
+                              setTextLoading(false);
+                            }
+                          }}
+                          className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                        >
+                          Refresh
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
