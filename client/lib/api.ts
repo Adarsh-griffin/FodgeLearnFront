@@ -107,7 +107,7 @@ class ApiService {
   // Get uploaded files
   async getFiles(): Promise<FileInfo[]> {
     const response = await fetch(`${this.baseURL}/api/files`);
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to fetch files');
@@ -135,22 +135,26 @@ class ApiService {
   }
 
   // Get text content
-  async getText(): Promise<string> {
+  async getText(): Promise<{ text: string; images: string[]; fileName?: string }> {
     const response = await fetch(`${this.baseURL}/api/get_text`);
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to fetch text');
     }
 
     const data = await response.json();
-    return data.script_text || '';
+    return {
+      text: data.script_text || '',
+      images: data.images || [],
+      fileName: data.fileName
+    };
   }
 
   // Get reference links
   async getLinks(): Promise<ReferenceLink[]> {
     const response = await fetch(`${this.baseURL}/api/get_links`);
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to fetch links');
@@ -158,7 +162,7 @@ class ApiService {
 
     const data = await response.json();
     const links = data.links || [];
-    
+
     // Convert string links to ReferenceLink objects if needed
     return links.map((link: string | ReferenceLink) => {
       if (typeof link === 'string') {
@@ -177,7 +181,7 @@ class ApiService {
       const urlObj = new URL(url);
       const hostname = urlObj.hostname.replace('www.', '');
       const pathname = urlObj.pathname.split('/').pop() || '';
-      
+
       if (pathname) {
         return pathname.replace(/[-_]/g, ' ').replace(/\.[^/.]+$/, '');
       }
@@ -188,9 +192,9 @@ class ApiService {
   }
 
   // Generate assessment question
-  async generateAssessment(): Promise<AssessmentQuestion> {
-    const response = await fetch(`${this.baseURL}/api/assessment/generate`);
-    
+  async generateAssessment(type: 'theoretical' | 'mcq' = 'theoretical'): Promise<AssessmentQuestion> {
+    const response = await fetch(`${this.baseURL}/api/assessment/generate?type=${type}`);
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to generate assessment');
@@ -229,7 +233,7 @@ class ApiService {
     if (fileName) {
       requestBody.fileName = fileName;
     }
-    
+
     const response = await fetch(`${this.baseURL}/api/learning-tts`, {
       method: 'POST',
       headers: {
@@ -348,7 +352,7 @@ class ApiService {
   // Check processing status
   async checkProcessingStatus(filename: string): Promise<ProcessingStatus> {
     const response = await fetch(`${this.baseURL}/api/processing-status/${encodeURIComponent(filename)}`);
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to check processing status');

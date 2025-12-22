@@ -10,7 +10,6 @@ import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Home } from "./pages/Home";
 import { StudyPage } from "./pages/Study";
-import { AssessmentPage } from "./pages/Assessment";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
@@ -40,15 +39,6 @@ const App = () => {
               </div>
             } />
             <Route path="/study" element={<StudyPage />} />
-            <Route path="/assessment" element={
-              <div className="flex flex-col min-h-screen">
-                <Navigation />
-                <main className="flex-1">
-                  <AssessmentPage />
-                </main>
-                <Footer />
-              </div>
-            } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

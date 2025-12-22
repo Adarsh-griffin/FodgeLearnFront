@@ -10,7 +10,8 @@ export function AnimatedHeroOverlay() {
           maxHeight: "100%",
           objectFit: "contain",
           objectPosition: "center",
-          display: "block"
+          display: "block",
+          mixBlendMode: "multiply"
         }}
         onLoad={() => console.log("GIF loaded successfully")}
         onError={(e) => console.error("GIF failed to load:", e)}

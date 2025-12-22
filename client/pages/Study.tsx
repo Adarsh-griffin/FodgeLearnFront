@@ -1,37 +1,105 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Upload, CheckCircle, MessageCircle, BookOpen, FileText, RotateCcw, ArrowLeft, Home } from "lucide-react";
+import { Upload, CheckCircle, MessageCircle, BookOpen, FileText, RotateCcw, ArrowLeft, Home, XCircle, Eye, EyeOff } from "lucide-react";
 import { apiService, UploadResponse, QAResponse, ReferenceLink, ProcessingStatus, AssessmentQuestion, AssessmentFeedback } from "@/lib/api";
+import ReactMarkdown from 'react-markdown';
+import rehypeKatex from 'rehype-katex';
+import remarkMath from 'remark-math';
+import remarkGfm from 'remark-gfm';
+import 'katex/dist/katex.min.css';
+import { Mic, Square } from "lucide-react";
+
 
 type AssessmentState = 'welcome' | 'question' | 'answer' | 'feedback';
 
-type AutoPipelineState = {
-  file?: string;
-  running: boolean;
-  error?: string;
-  summaryHash?: string;
-  attempted: boolean;
-};
+
 
 const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "upload" | "learning" | "assessment") => void, navigate: (path: string | number) => void }) => {
   const [currentState, setCurrentState] = useState<AssessmentState>('welcome');
   const [question, setQuestion] = useState<string>('');
   const [userAnswer, setUserAnswer] = useState<string>('');
   const [feedback, setFeedback] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
+  // State for MCQ
+  const [mcqData, setMcqData] = useState<{
+    question: string;
+    options: { key: string; text: string }[];
+    correctAnswer: string;
+    explanation: string;
+    hint: string;
+  } | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [showHint, setShowHint] = useState(false);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [showExplanation, setShowExplanation] = useState(false);
+
+  // State for Text/Audio
+  const [isLoading, setIsLoading] = useState(false); // Used for submission
+  const [generatingType, setGeneratingType] = useState<'theoretical' | 'mcq' | null>(null); // Track which button is loading
   const [error, setError] = useState<string>('');
 
-  const generateQuestion = async () => {
-    setIsLoading(true);
-    setError('');
+  // Parse MCQ text
+  const parseMCQ = (text: string) => {
     try {
-      const response: AssessmentQuestion = await apiService.generateAssessment();
-      setQuestion(response.question);
+      // Regex to allow optional "Question:" prefix and be case-insensitive/flexible
+      const questionMatch = text.match(/^(?:Question:\s*)?(.*?)(?=\s*A\))/si);
+      const optionsMatch = text.match(/A\)\s*(.*?)\s*B\)\s*(.*?)\s*C\)\s*(.*?)\s*D\)\s*(.*?)(?=\s*(?:Correct Answer:|Answer:))/si);
+      const correctMatch = text.match(/(?:Correct Answer:|Answer:)\s*(.*?)(?=\s*Explanation:)/si);
+      const explanationMatch = text.match(/Explanation:\s*(.*?)(?=\s*Hint:|$)/si);
+      const hintMatch = text.match(/Hint:\s*(.*)/si);
+
+      if (questionMatch && optionsMatch && correctMatch) {
+        return {
+          question: questionMatch[1].trim(),
+          options: [
+            { key: 'A', text: optionsMatch[1].trim() },
+            { key: 'B', text: optionsMatch[2].trim() },
+            { key: 'C', text: optionsMatch[3].trim() },
+            { key: 'D', text: optionsMatch[4].trim() },
+          ],
+          // Normalize answer to just the letter (e.g. "Option D" -> "D", "D." -> "D")
+          correctAnswer: correctMatch[1].trim().replace(/^Option\s+/, '').replace(/\.$/, '').toUpperCase(),
+          explanation: explanationMatch ? explanationMatch[1].trim() : '',
+          hint: hintMatch ? hintMatch[1].trim() : '',
+        };
+      }
+      return null;
+    } catch (e) {
+      console.error("Failed to parse MCQ", e);
+      return null;
+    }
+  };
+
+  const generateQuestion = async (type: 'theoretical' | 'mcq') => {
+    setGeneratingType(type);
+    setError('');
+    // Reset MCQ state
+    setMcqData(null);
+    setSelectedOption(null);
+    setShowHint(false);
+    setIsCorrect(null);
+    setShowExplanation(false);
+
+    try {
+      const response: AssessmentQuestion = await apiService.generateAssessment(type);
+
+      if (type === 'mcq') {
+        const parsed = parseMCQ(response.question);
+        if (parsed) {
+          setMcqData(parsed);
+          setQuestion(parsed.question); // Fallback / Display
+        } else {
+          // Fallback if parsing fails (shouldn't happen with strict prompt)
+          setQuestion(response.question);
+        }
+      } else {
+        setQuestion(response.question);
+      }
+
       setCurrentState('question');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate question');
     } finally {
-      setIsLoading(false);
+      setGeneratingType(null);
     }
   };
 
@@ -71,14 +139,14 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
       <div className="flex-1 flex min-h-0">
         {/* Left Sidebar */}
         <div className="w-20 bg-gray-100 flex flex-col items-center py-4 gap-3">
-          <button 
+          <button
             onClick={() => handleTabChange("upload")}
             className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-gray-200 text-gray-600 hover:bg-gray-300"
             title="Upload Documents"
           >
             <Upload className="w-5 h-5" />
           </button>
-          <button 
+          <button
             onClick={() => handleTabChange("learning")}
             className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-gray-200 text-gray-600 hover:bg-gray-300"
             title="Learning Hub"
@@ -92,7 +160,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
           >
             <MessageCircle className="w-5 h-5" />
           </button> */}
-          <button 
+          <button
             onClick={() => handleTabChange("assessment")}
             className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-indigo-100 text-indigo-600"
             title="Assessment"
@@ -123,29 +191,49 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                   </div>
                   <h2 className="text-3xl font-bold text-gray-800 mb-4">Ready for Assessment?</h2>
                   <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-                    Test your understanding with AI-generated questions based on your latest uploaded document. 
+                    Test your understanding with AI-generated questions based on your latest uploaded document.
                     Get personalized feedback and improve your learning.
                   </p>
-                  
+
                   <div className="space-y-4">
-                    <button
-                      onClick={generateQuestion}
-                      disabled={isLoading}
-                      className="w-full max-w-md mx-auto px-8 py-4 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                    >
-                      {isLoading ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          Generating Question...
-                        </>
-                      ) : (
-                        <>
-                          <FileText size={20} />
-                          Generate Question
-                        </>
-                      )}
-                    </button>
-                    
+                    <div className="flex gap-4 max-w-2xl mx-auto">
+                      <button
+                        onClick={() => generateQuestion('theoretical')}
+                        disabled={generatingType !== null}
+                        className="flex-1 px-6 py-4 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {generatingType === 'theoretical' ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <FileText size={20} />
+                            Generate Theoretical Question
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => generateQuestion('mcq')}
+                        disabled={generatingType !== null}
+                        className="flex-1 px-6 py-4 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {generatingType === 'mcq' ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle size={20} />
+                            Generate MCQ
+                          </>
+                        )}
+                      </button>
+                    </div>
+
                     <p className="text-sm text-gray-500">
                       Questions are generated from your most recently uploaded document
                     </p>
@@ -154,146 +242,340 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
               </div>
             )}
 
-            {/* Question State */}
-            {currentState === 'question' && (
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">
-                      1
-                    </div>
-                    <h2 className="text-xl font-semibold text-gray-800">Generated Question</h2>
-                  </div>
-                  
-                  <div className="bg-gray-50 rounded-lg p-6 border-l-4 border-indigo-500">
-                    <p className="text-lg text-gray-800 leading-relaxed">{question}</p>
-                  </div>
-                </div>
+            {/* Assessment Tab */}
+            {currentState !== 'welcome' && (
+              (() => {
+                // Helper to improve LaTeX rendering and clean artifacts
+                // Helper to improve LaTeX rendering and clean artifacts
+                const formatContent = (content: string) => {
+                  if (!content) return '';
+                  // Remove leading/trailing artifacts like "**", "Question:", "Hint:"
+                  // Also remove trailing ** which sometimes appears
+                  let clean = content
+                    .replace(/^\s*(\*\*|Question:|Hint:|Explanation:|\*\*Question:)\s*/i, '')
+                    .replace(/\*\*\s*$/, '') // Remove trailing **
+                    .replace(/^\*\*/, '') // Remove leading **
+                    .replace(/\*\*/g, ''); // Remove ALL ** if user wants them gone from math. But usually bold is fine. 
+                  // User complained about "2 stars", likely artifacts. Safe to remove bolding markers for cleaner math if they are interfering.
 
-                <div className="flex gap-4">
-                  <button
-                    onClick={startAnswering}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                  >
-                    <CheckCircle size={20} />
-                    Start Answering
-                  </button>
-                  <button
-                    onClick={resetAssessment}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2"
-                  >
-                    <RotateCcw size={20} />
-                    New Question
-                  </button>
-                </div>
-              </div>
-            )}
+                  // Fix LaTeX delimiters for ReactMarkdown/RemarkMath
+                  // \[ ... \] -> $$ ... $$
+                  // \( ... \) -> $ ... $
+                  clean = clean.replace(/\\\[/g, '$$$').replace(/\\\]/g, '$$$')
+                    .replace(/\\\(/g, '$').replace(/\\\)/g, '$');
 
-            {/* Answer State */}
-            {currentState === 'answer' && (
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">
-                      2
-                    </div>
-                    <h2 className="text-xl font-semibold text-gray-800">Your Answer</h2>
-                  </div>
-                  
-                  <div className="bg-gray-50 rounded-lg p-4 mb-6 border-l-4 border-indigo-500">
-                    <p className="text-sm text-gray-600 mb-2">Question:</p>
-                    <p className="text-gray-800">{question}</p>
-                  </div>
+                  // Heuristic for (Q = ...) -> $(Q = ...)$ from previous logic
+                  clean = clean.replace(/\(([^)\n]*\\[^)\n]*)\)/g, '$$$1$$')
+                    .replace(/\(([^)\n]*=[^)\n]*)\)/g, '$$$1$$');
 
-                  <div className="space-y-4">
-                    <label className="block">
-                      <span className="text-sm font-medium text-gray-700 mb-2 block">Your Answer:</span>
-                      <textarea
-                        value={userAnswer}
-                        onChange={(e) => setUserAnswer(e.target.value)}
-                        placeholder="Type your answer here..."
-                        className="w-full p-4 border border-gray-300 rounded-lg text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        rows={6}
-                      />
-                    </label>
-                  </div>
-                </div>
+                  return clean;
+                };
 
-                <div className="flex gap-4">
-                  <button
-                    onClick={submitAnswer}
-                    disabled={isLoading || !userAnswer.trim()}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {isLoading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle size={20} />
-                        Submit Answer
-                      </>
+                return (
+                  <>
+                    {/* Question State */}
+                    {currentState === 'question' && (
+                      <div className="bg-white rounded-xl shadow-lg p-8">
+                        <div className="mb-6">
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">
+                              1
+                            </div>
+                            <h2 className="text-xl font-semibold text-gray-800">Generated Question</h2>
+                          </div>
+
+                          <div className="bg-gray-50 rounded-lg p-6 border-l-4 border-indigo-500">
+                            <div className="text-lg text-gray-800 leading-relaxed prose prose-indigo max-w-none">
+                              <div className="response-container">
+                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                  {formatContent(question)}
+                                </ReactMarkdown>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* MCQ Logic */}
+                          {mcqData ? (
+                            <div className="mt-6 space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {mcqData.options.map((opt) => (
+                                  <button
+                                    key={opt.key}
+                                    onClick={() => {
+                                      setSelectedOption(opt.key);
+                                      const correct = opt.key === mcqData.correctAnswer.charAt(0) || mcqData.correctAnswer.includes(opt.key); // Loose match
+                                      setIsCorrect(correct);
+                                      setShowExplanation(!correct); // Show explanation if wrong
+                                    }}
+                                    disabled={isCorrect === true}
+                                    className={`p-4 rounded-xl border-2 text-left transition-all ${selectedOption === opt.key
+                                      ? isCorrect
+                                        ? 'border-green-500 bg-green-50 text-green-900'
+                                        : 'border-red-500 bg-red-50 text-red-900'
+                                      : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700'
+                                      }`}
+                                  >
+                                    <span className="font-bold mr-2 text-lg align-top">{opt.key})</span>
+                                    <div className="inline-block prose prose-sm max-w-none">
+                                      <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                        {formatContent(opt.text)}
+                                      </ReactMarkdown>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+
+                              <div className="flex items-center justify-between mt-4">
+                                {mcqData.hint && (
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => setShowHint(!showHint)}
+                                      className="text-sm font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                                    >
+                                      {showHint ? <EyeOff size={16} /> : <Eye size={16} />}
+                                      {showHint ? 'Hide Hint' : 'Need a Hint?'}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+
+                              {showHint && (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-yellow-800 text-sm">
+                                  <strong>Hint:</strong>
+                                  <div className="mt-1 prose prose-sm max-w-none text-yellow-900">
+                                    <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                      {formatContent(mcqData.hint)}
+                                    </ReactMarkdown>
+                                  </div>
+                                </div>
+                              )}
+
+                              {selectedOption && (
+                                <div className={`p-4 rounded-lg border flex items-start gap-3 ${isCorrect ? 'bg-green-100 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                  {isCorrect ? <CheckCircle className="text-green-600 shrink-0 mt-1" /> : <XCircle className="text-red-600 shrink-0 mt-1" />}
+                                  <div className="w-full">
+                                    <p className={`font-semibold ${isCorrect ? 'text-green-800' : 'text-red-800'}`}>
+                                      {isCorrect ? 'Correct Answer!' : 'Incorrect'}
+                                    </p>
+                                    {(!isCorrect && showExplanation) && (
+                                      <div className="text-red-800 mt-2 text-sm">
+                                        <strong>Explanation:</strong>
+                                        <div className="mt-1 prose prose-sm max-w-none text-red-900">
+                                          <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                            {formatContent(mcqData.explanation)}
+                                          </ReactMarkdown>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="mt-4 flex justify-end">
+                                <button
+                                  onClick={() => generateQuestion('mcq')}
+                                  disabled={generatingType === 'mcq'}
+                                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2"
+                                >
+                                  {generatingType === 'mcq' ? (
+                                    <div className="w-5 h-5 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                                  ) : (
+                                    <RotateCcw size={20} />
+                                  )}
+                                  New Question
+                                </button>
+                              </div>
+
+                            </div>
+                          ) : (
+                            // Standard Theoretical UI Buttons
+                            <div className="flex gap-4">
+                              <button
+                                onClick={startAnswering}
+                                className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                              >
+                                <CheckCircle size={20} />
+                                Start Answering
+                              </button>
+                              <button
+                                onClick={resetAssessment}
+                                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2"
+                              >
+                                <RotateCcw size={20} />
+                                New Question
+                              </button>
+                            </div>
+                          )}
+
+                        </div>
+                      </div>
                     )}
-                  </button>
-                  <button
-                    onClick={() => setCurrentState('question')}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-                  >
-                    Back to Question
-                  </button>
-                </div>
-              </div>
+
+                    {/* Answer State */}
+                    {currentState === 'answer' && (
+                      <div className="bg-white rounded-xl shadow-lg p-8">
+                        <div className="mb-6">
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">
+                              2
+                            </div>
+                            <h2 className="text-xl font-semibold text-gray-800">Your Answer</h2>
+                          </div>
+
+                          <div className="bg-gray-50 rounded-lg p-4 mb-6 border-l-4 border-indigo-500">
+                            <p className="text-sm text-gray-600 mb-2">Question:</p>
+                            <div className="text-gray-800 prose prose-sm max-w-none">
+                              <div className="response-container">
+                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                  {formatContent(question)}
+                                </ReactMarkdown>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                            <label className="block">
+                              <span className="text-sm font-medium text-gray-700 mb-2 block">Your Answer:</span>
+                              <textarea
+                                value={userAnswer}
+                                onChange={(e) => setUserAnswer(e.target.value)}
+                                placeholder="Type your answer here..."
+                                className="w-full p-4 border border-gray-300 rounded-lg text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                rows={6}
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-4">
+                          <button
+                            onClick={submitAnswer}
+                            disabled={isLoading || !userAnswer.trim()}
+                            className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          >
+                            {isLoading ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                Submitting...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle size={20} />
+                                Submit Answer
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setCurrentState('question')}
+                            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                          >
+                            Back to Question
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Feedback State */}
+                    {currentState === 'feedback' && (() => {
+                      // Helper to determine feedback status
+                      const getFeedbackStatus = (text: string) => {
+                        const lowerText = text.toLowerCase();
+                        if (lowerText.includes('status: incorrect') || lowerText.includes('status**: incorrect') || lowerText.includes('status:** incorrect')) return 'incorrect';
+                        if (lowerText.includes('status: partially correct') || lowerText.includes('status**: partially correct')) return 'partial';
+                        if (lowerText.includes('status: correct') || lowerText.includes('status**: correct')) return 'correct';
+                        if (lowerText.includes('incorrect')) return 'incorrect';
+                        if (lowerText.includes('partially correct')) return 'partial';
+                        if (lowerText.includes('correct')) return 'correct';
+                        return 'correct';
+                      };
+
+                      const status = getFeedbackStatus(feedback);
+
+                      const statusStyles = {
+                        correct: {
+                          bg: 'bg-green-50',
+                          border: 'border-green-500',
+                          icon: <CheckCircle size={24} className="text-green-600 mt-1" />,
+                          title: 'text-green-800',
+                        },
+                        incorrect: {
+                          bg: 'bg-red-50',
+                          border: 'border-red-500',
+                          icon: <XCircle size={24} className="text-red-600 mt-1" />,
+                          title: 'text-red-800',
+                        },
+                        partial: {
+                          bg: 'bg-yellow-50',
+                          border: 'border-yellow-500',
+                          icon: <CheckCircle size={24} className="text-yellow-600 mt-1" />,
+                          title: 'text-yellow-800',
+                        }
+                      };
+
+                      const currentStyle = statusStyles[status];
+
+                      return (
+                        <div className="bg-white rounded-xl shadow-lg p-8">
+                          <div className="mb-6">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className={`w-8 h-8 ${status === 'incorrect' ? 'bg-red-600' : 'bg-green-600'} text-white rounded-full flex items-center justify-center font-bold`}>
+                                3
+                              </div>
+                              <h2 className="text-xl font-semibold text-gray-800">Assessment Feedback</h2>
+                            </div>
+
+                            <div className="bg-gray-50 rounded-lg p-4 mb-6 border-l-4 border-indigo-500">
+                              <p className="text-sm text-gray-600 mb-2">Question:</p>
+                              <div className="text-gray-800 mb-4 prose prose-sm max-w-none">
+                                <div className="response-container">
+                                  <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                    {formatContent(question)}
+                                  </ReactMarkdown>
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2">Your Answer:</p>
+                              <p className="text-gray-800">{userAnswer}</p>
+                            </div>
+
+                            <div className={`${currentStyle.bg} rounded-lg p-6 border-l-4 ${currentStyle.border}`}>
+                              <div className="flex items-start gap-3 mb-4">
+                                {currentStyle.icon}
+                                <h3 className={`text-lg font-semibold ${currentStyle.title}`}>AI Tutor Feedback</h3>
+                              </div>
+                              <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed">
+                                <div className={`response-container ${status}`}>
+                                  <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                    {formatContent(feedback)}
+                                  </ReactMarkdown>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-4">
+                            <button
+                              onClick={resetAssessment}
+                              className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                            >
+                              <RotateCcw size={20} />
+                              New Assessment
+                            </button>
+                            <button
+                              onClick={() => setCurrentState('answer')}
+                              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                            >
+                              Try Again
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </>
+                );
+              })()
             )}
 
-            {/* Feedback State */}
-            {currentState === 'feedback' && (
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
-                      3
-                    </div>
-                    <h2 className="text-xl font-semibold text-gray-800">Assessment Feedback</h2>
-                  </div>
-                  
-                  <div className="bg-gray-50 rounded-lg p-4 mb-6 border-l-4 border-indigo-500">
-                    <p className="text-sm text-gray-600 mb-2">Question:</p>
-                    <p className="text-gray-800 mb-4">{question}</p>
-                    <p className="text-sm text-gray-600 mb-2">Your Answer:</p>
-                    <p className="text-gray-800">{userAnswer}</p>
-                  </div>
-
-                  <div className="bg-green-50 rounded-lg p-6 border-l-4 border-green-500">
-                    <div className="flex items-start gap-3 mb-4">
-                      <CheckCircle size={24} className="text-green-600 mt-1" />
-                      <h3 className="text-lg font-semibold text-green-800">AI Tutor Feedback</h3>
-                    </div>
-                    <div className="prose prose-sm max-w-none">
-                      <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{feedback}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <button
-                    onClick={resetAssessment}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                  >
-                    <RotateCcw size={20} />
-                    New Assessment
-                  </button>
-                  <button
-                    onClick={() => setCurrentState('answer')}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          </div >
         </div>
       </div>
     </div>
@@ -310,7 +592,7 @@ export function StudyPage() {
   const [processingStatus, setProcessingStatus] = useState<{ [key: string]: ProcessingStatus }>({});
   const [successMessages, setSuccessMessages] = useState<{ [key: string]: boolean }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Resize functionality
   const [sectionWidths, setSectionWidths] = useState([33.33, 33.33, 33.34]); // Video, AI Tutor, AI Summary
   const [isResizing, setIsResizing] = useState(false);
@@ -354,7 +636,7 @@ export function StudyPage() {
         setBackendConnected(false);
       }
     };
-    
+
     testConnection();
   }, []);
 
@@ -394,12 +676,12 @@ export function StudyPage() {
 
     if (validFiles.length > 0) {
       setFiles((prev) => [...prev, ...validFiles]);
-      
+
       for (const file of validFiles) {
         try {
           // Show upload progress
           setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
-          
+
           // Simulate progress
           const progressInterval = setInterval(() => {
             setUploadProgress(prev => {
@@ -414,12 +696,12 @@ export function StudyPage() {
 
           // Upload to backend
           const response: UploadResponse = await apiService.uploadFile(file);
-          
+
           // Complete progress
           setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
-          
+
           console.log('Upload successful:', response);
-          
+
           // Clear cache when new document is uploaded
           localStorage.removeItem('neurolearn_summary_text');
           localStorage.removeItem('neurolearn_text_timestamp');
@@ -428,15 +710,15 @@ export function StudyPage() {
           localStorage.removeItem('neurolearn_available_files');
           localStorage.removeItem('neurolearn_files_timestamp');
           console.log('🗑️ Cleared cache for new document upload');
-          
+
           // Start polling for processing status
           if (response.filename) {
-            setProcessingStatus(prev => ({ 
-              ...prev, 
-              [file.name]: { 
-                status: 'processing', 
-                message: 'Processing started...' 
-              } 
+            setProcessingStatus(prev => ({
+              ...prev,
+              [file.name]: {
+                status: 'processing',
+                message: 'Processing started...'
+              }
             }));
             pollProcessingStatus(response.filename);
           }
@@ -489,11 +771,11 @@ export function StudyPage() {
     try {
       const status = await apiService.checkProcessingStatus(filename);
       setProcessingStatus(prev => ({ ...prev, [filename]: status }));
-      
+
       if (status.status === 'completed') {
         setSuccessMessages(prev => ({ ...prev, [filename]: true }));
         console.log(`✅ Processing completed for ${filename}`);
-        
+
         // Clear cache when processing is completed to ensure fresh data
         localStorage.removeItem('neurolearn_summary_text');
         localStorage.removeItem('neurolearn_text_timestamp');
@@ -515,30 +797,30 @@ export function StudyPage() {
   const handleMouseDown = useCallback((e: React.MouseEvent, index: number) => {
     e.preventDefault();
     setIsResizing(true);
-    
+
     const startX = e.clientX;
     const startWidths = [...sectionWidths];
-    
+
     const handleMouseMove = (e: MouseEvent) => {
       if (!containerRef.current) return;
-      
+
       const containerWidth = containerRef.current.offsetWidth;
       const deltaX = e.clientX - startX;
       const deltaPercent = (deltaX / containerWidth) * 100;
-      
+
       const newWidths = [...startWidths];
       newWidths[index] = Math.max(10, Math.min(80, startWidths[index] + deltaPercent));
       newWidths[index + 1] = Math.max(10, Math.min(80, startWidths[index + 1] - deltaPercent));
-      
+
       setSectionWidths(newWidths);
     };
-    
+
     const handleMouseUp = () => {
       setIsResizing(false);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-    
+
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
   }, [sectionWidths]);
@@ -547,36 +829,33 @@ export function StudyPage() {
     <div className="h-full w-full flex flex-col">
       <div className="flex-1 flex">
         <div className="w-20 bg-gray-100 flex flex-col items-center py-4 gap-3">
-          <button 
+          <button
             onClick={() => navigate("/")}
             className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-gray-200 text-gray-600 hover:bg-gray-300"
             title="Home"
           >
             <Home className="w-5 h-5" />
           </button>
-          <button 
+          <button
             onClick={() => handleTabChange("upload")}
-            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
-              activeTab === "upload" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-            }`}
+            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "upload" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+              }`}
             title="Upload Documents"
           >
             <Upload className="w-5 h-5" />
           </button>
-          <button 
+          <button
             onClick={() => handleTabChange("learning")}
-            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
-              activeTab === "learning" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-            }`}
+            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "learning" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+              }`}
             title="Learning Hub"
           >
             <BookOpen className="w-5 h-5" />
           </button>
-          <button 
+          <button
             onClick={() => handleTabChange("assessment")}
-            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
-              activeTab === "assessment" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-            }`}
+            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "assessment" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+              }`}
             title="Assessment"
           >
             <FileText className="w-5 h-5" />
@@ -589,18 +868,16 @@ export function StudyPage() {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-2xl p-12 text-center transition-colors ${
-                isDragging
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/50 bg-muted/20"
-              }`}
+              className={`border-2 border-dashed rounded-2xl p-12 text-center transition-colors ${isDragging
+                ? "border-primary bg-primary/5"
+                : "border-border hover:border-primary/50 bg-muted/20"
+                }`}
             >
               <div className="mb-4">
                 <Upload
                   size={48}
-                  className={`mx-auto ${
-                    isDragging ? "text-primary" : "text-muted-foreground"
-                  }`}
+                  className={`mx-auto ${isDragging ? "text-primary" : "text-muted-foreground"
+                    }`}
                 />
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-2">
@@ -637,15 +914,14 @@ export function StudyPage() {
                     const status = processingStatus[file.name];
                     const isProcessingComplete = status?.status === 'completed';
                     const showSuccess = successMessages[file.name];
-                    
+
                     return (
                       <div
                         key={file.name}
-                        className={`rounded-lg p-4 border transition-colors ${
-                          showSuccess 
-                            ? "bg-green-50 border-green-200 hover:border-green-300" 
-                            : "bg-muted/30 border-border hover:border-primary/30"
-                        }`}
+                        className={`rounded-lg p-4 border transition-colors ${showSuccess
+                          ? "bg-green-50 border-green-200 hover:border-green-300"
+                          : "bg-muted/30 border-border hover:border-primary/30"
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
@@ -661,7 +937,7 @@ export function StudyPage() {
                                 {file.name}
                               </span>
                             </div>
-                            
+
                             {showSuccess ? (
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
@@ -689,13 +965,12 @@ export function StudyPage() {
                                 <span>{Math.round(progress)}% uploaded</span>
                               </div>
                             )}
-                            
+
                             {!showSuccess && (
                               <div className="mt-2 w-full bg-muted rounded-full h-2">
                                 <div
-                                  className={`h-2 rounded-full transition-all duration-300 ${
-                                    isUploadComplete ? "bg-blue-600" : "bg-primary"
-                                  }`}
+                                  className={`h-2 rounded-full transition-all duration-300 ${isUploadComplete ? "bg-blue-600" : "bg-primary"
+                                    }`}
                                   style={{ width: `${progress}%` }}
                                 />
                               </div>
@@ -714,7 +989,7 @@ export function StudyPage() {
                 </div>
 
                 {files.some((f) => successMessages[f.name]) && (
-                  <button 
+                  <button
                     className="mt-6 w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
                     onClick={() => handleTabChange("learning")}
                   >
@@ -750,20 +1025,17 @@ export function StudyPage() {
     const [referenceLinks, setReferenceLinks] = useState<ReferenceLink[]>([]);
     const [linksLoading, setLinksLoading] = useState(false);
     const [summaryText, setSummaryText] = useState<string>('');
+    const [summaryImages, setSummaryImages] = useState<string[]>([]);
     const [textLoading, setTextLoading] = useState(false);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [videoLoading, setVideoLoading] = useState(false);
     const [videoError, setVideoError] = useState<string | null>(null);
-    const [autoPipelineStatus, setAutoPipelineStatus] = useState<AutoPipelineState>({
-      running: false,
-      attempted: false
-    });
     const summaryHashValue = summaryText && summaryText.trim().length > 0
       ? `${summaryText.length}-${summaryText.slice(0, 64)}`
       : undefined;
-    
+
     // Chat functionality
-    const [chatMessages, setChatMessages] = useState<Array<{id: string, type: 'user' | 'bot', content: string, timestamp: Date}>>(() => {
+    const [chatMessages, setChatMessages] = useState<Array<{ id: string, type: 'user' | 'bot', content: string, timestamp: Date }>>(() => {
       // Load chat history from localStorage on initialization
       try {
         const cachedChat = localStorage.getItem('neurolearn_chat_history');
@@ -786,12 +1058,15 @@ export function StudyPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
     const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
-    
+
     // File selection for Q&A
     const [availableFiles, setAvailableFiles] = useState<string[]>([]);
     const [selectedFile, setSelectedFile] = useState<string>('');
     const [filesLoading, setFilesLoading] = useState(false);
-    
+
+    // Image Zoom State
+    const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
     // Chat scroll ref
     const chatScrollRef = useRef<HTMLDivElement>(null);
 
@@ -820,7 +1095,7 @@ export function StudyPage() {
         try {
           const links = await apiService.getLinks();
           setReferenceLinks(links);
-          
+
           // Cache the links
           localStorage.setItem('neurolearn_reference_links', JSON.stringify(links));
           localStorage.setItem('neurolearn_links_timestamp', now.toString());
@@ -832,7 +1107,7 @@ export function StudyPage() {
           setLinksLoading(false);
         }
       };
-      
+
       loadLinks();
     }, []);
 
@@ -841,6 +1116,7 @@ export function StudyPage() {
       const loadSummaryText = async () => {
         // Check localStorage first
         const cachedText = localStorage.getItem('neurolearn_summary_text');
+        const cachedImages = localStorage.getItem('neurolearn_summary_images');
         const cacheTimestamp = localStorage.getItem('neurolearn_text_timestamp');
         const now = Date.now();
         const cacheAge = cacheTimestamp ? now - parseInt(cacheTimestamp) : Infinity;
@@ -848,28 +1124,52 @@ export function StudyPage() {
 
         if (cachedText && cacheAge < CACHE_DURATION) {
           setSummaryText(cachedText);
+          if (cachedImages) {
+            try {
+              setSummaryImages(JSON.parse(cachedImages));
+            } catch (e) {
+              console.error('Failed to parse cached images:', e);
+            }
+          }
           console.log('📦 Loaded summary text from cache');
           return;
         }
 
         setTextLoading(true);
         try {
-          const text = await apiService.getText();
+          const { text, images, fileName } = await apiService.getText();
           console.log('Fetched text from API:', text);
           setSummaryText(text);
-          
+
+          // Construct direct S3 URLs if fileName is available
+          let finalImages = images;
+          if (fileName) {
+            const cleanName = fileName.replace(/\.[^/.]+$/, ""); // Remove extension
+            const bucketUrl = "https://adarsh-demo-neurolearn.s3.ap-southeast-2.amazonaws.com/learning-images";
+            // Generate 4 predicted URLs
+            const constructedUrls = [1, 2, 3, 4].map(i =>
+              `${bucketUrl}/${cleanName}/${cleanName}-learning-image-${i}.png`
+            );
+            finalImages = constructedUrls;
+            console.log('Using constructed S3 URLs:', finalImages);
+          }
+
+          setSummaryImages(finalImages);
+
           // Cache the text
           localStorage.setItem('neurolearn_summary_text', text);
+          localStorage.setItem('neurolearn_summary_images', JSON.stringify(finalImages));
           localStorage.setItem('neurolearn_text_timestamp', now.toString());
           console.log('💾 Cached summary text');
         } catch (error) {
           console.error('Failed to load summary text:', error);
           setSummaryText('');
+          setSummaryImages([]);
         } finally {
           setTextLoading(false);
         }
       };
-      
+
       loadSummaryText();
     }, []);
 
@@ -908,7 +1208,7 @@ export function StudyPage() {
             if (fileList.length > 0 && !selectedFile) {
               setSelectedFile(fileList[0]);
             }
-            
+
             // Cache the files
             localStorage.setItem('neurolearn_available_files', JSON.stringify(fileList));
             localStorage.setItem('neurolearn_files_timestamp', now.toString());
@@ -920,7 +1220,7 @@ export function StudyPage() {
           setFilesLoading(false);
         }
       };
-      
+
       loadAvailableFiles();
     }, [selectedFile]);
 
@@ -954,71 +1254,7 @@ export function StudyPage() {
       loadLatestVideo(selectedFile);
     }, [selectedFile, loadLatestVideo]);
 
-    const triggerAutoPipeline = useCallback(
-      async (targetFile?: string, targetSummary?: string, targetSummaryHash?: string) => {
-        const fileName = targetFile || selectedFile || availableFiles[0];
-        if (!fileName || !targetSummary || !targetSummary.trim()) {
-          return;
-        }
-        setAutoPipelineStatus({
-          running: true,
-          file: fileName,
-          error: undefined,
-          summaryHash: targetSummaryHash,
-          attempted: false
-        });
-        setVideoLoading(true);
-        try {
-          const ttsResult = await apiService.learningTTS(targetSummary, fileName);
-          setAutoPipelineStatus({
-            running: false,
-            file: fileName,
-            error: undefined,
-            summaryHash: targetSummaryHash,
-            attempted: true
-          });
-          if (ttsResult.videoUrl) {
-            setVideoUrl(ttsResult.videoUrl);
-            setVideoError(null);
-          } else if (ttsResult.videoError) {
-            setVideoError(ttsResult.videoError);
-          } else {
-            await loadLatestVideo(fileName);
-          }
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to auto-generate audio/video';
-          setAutoPipelineStatus({
-            running: false,
-            file: fileName,
-            error: message,
-            summaryHash: targetSummaryHash,
-            attempted: true
-          });
-          setVideoError(message);
-        } finally {
-          setVideoLoading(false);
-        }
-      },
-      [availableFiles, loadLatestVideo, selectedFile]
-    );
 
-    useEffect(() => {
-      const fileName = selectedFile || availableFiles[0];
-      if (!fileName || !summaryHashValue) {
-        return;
-      }
-      if (autoPipelineStatus.running) {
-        return;
-      }
-      if (
-        autoPipelineStatus.file === fileName &&
-        autoPipelineStatus.summaryHash === summaryHashValue &&
-        autoPipelineStatus.attempted
-      ) {
-        return;
-      }
-      triggerAutoPipeline(fileName, summaryText, summaryHashValue);
-    }, [summaryHashValue, summaryText, selectedFile, availableFiles, autoPipelineStatus, triggerAutoPipeline]);
 
     const handleRefreshVideo = async () => {
       await loadLatestVideo(selectedFile);
@@ -1035,13 +1271,7 @@ export function StudyPage() {
       try {
         await apiService.generateLipsyncVideo(fileName);
         await loadLatestVideo(fileName);
-        setAutoPipelineStatus({
-          running: false,
-          file: fileName,
-          error: undefined,
-          summaryHash: summaryHashValue,
-          attempted: true
-        });
+
       } catch (error) {
         console.error('Failed to generate lipsync video:', error);
         setVideoError(error instanceof Error ? error.message : 'Failed to generate lipsync video');
@@ -1103,18 +1333,18 @@ export function StudyPage() {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const recorder = new MediaRecorder(stream);
         const chunks: Blob[] = [];
-        
+
         recorder.ondataavailable = (event) => {
           chunks.push(event.data);
         };
-        
+
         recorder.onstop = async () => {
           const audioBlob = new Blob(chunks, { type: 'audio/webm' });
           setAudioChunks(chunks);
           await processVoiceInput(audioBlob);
           stream.getTracks().forEach(track => track.stop());
         };
-        
+
         recorder.start();
         setMediaRecorder(recorder);
         setIsRecording(true);
@@ -1141,20 +1371,20 @@ export function StudyPage() {
         // Use the selected file for Q&A context
         const fileName = selectedFile || 'keph101.pdf';
         formData.append('fileName', fileName);
-        
+
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/qa-voice`, {
           method: 'POST',
           body: formData,
         });
-        
+
         if (!response.ok) {
           throw new Error('STT processing failed');
         }
-        
+
         const data = await response.json();
         const userMessage = data.transcript;
         const botResponse = data.response;
-        
+
         // Add user message to chat
         const userMsg = {
           id: Date.now().toString(),
@@ -1162,7 +1392,7 @@ export function StudyPage() {
           content: userMessage,
           timestamp: new Date()
         };
-        
+
         // Add bot response to chat
         const botMsg = {
           id: (Date.now() + 1).toString(),
@@ -1170,15 +1400,15 @@ export function StudyPage() {
           content: botResponse,
           timestamp: new Date()
         };
-        
+
         setChatMessages(prev => [...prev, userMsg, botMsg]);
-        
+
         // Play TTS if available
         if (data.audioUrl) {
           const audio = new Audio(data.audioUrl);
           audio.play();
         }
-        
+
       } catch (error) {
         console.error('Error processing voice input:', error);
         const errorMsg = {
@@ -1195,11 +1425,11 @@ export function StudyPage() {
 
     const sendTextMessage = async () => {
       if (!currentMessage.trim()) return;
-      
+
       setIsProcessing(true);
       const userMessage = currentMessage;
       setCurrentMessage('');
-      
+
       // Add user message to chat
       const userMsg = {
         id: Date.now().toString(),
@@ -1208,7 +1438,7 @@ export function StudyPage() {
         timestamp: new Date()
       };
       setChatMessages(prev => [...prev, userMsg]);
-      
+
       try {
         // Send to Q&A endpoint
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/qa`, {
@@ -1221,14 +1451,14 @@ export function StudyPage() {
             fileName: selectedFile || 'keph101.pdf'
           }),
         });
-        
+
         if (!response.ok) {
           throw new Error('Q&A processing failed');
         }
-        
+
         const data = await response.json();
         const botResponse = data.response;
-        
+
         // Add bot response to chat
         const botMsg = {
           id: (Date.now() + 1).toString(),
@@ -1237,7 +1467,7 @@ export function StudyPage() {
           timestamp: new Date()
         };
         setChatMessages(prev => [...prev, botMsg]);
-        
+
         // Optional: Generate TTS for the response
         try {
           const ttsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/qa-tts`, {
@@ -1247,7 +1477,7 @@ export function StudyPage() {
             },
             body: JSON.stringify({ text: botResponse }),
           });
-          
+
           if (ttsResponse.ok) {
             const ttsData = await ttsResponse.json();
             if (ttsData.audioUrl) {
@@ -1258,7 +1488,7 @@ export function StudyPage() {
         } catch (ttsError) {
           console.log('TTS not available:', ttsError);
         }
-        
+
       } catch (error) {
         console.error('Error sending message:', error);
         const errorMsg = {
@@ -1274,486 +1504,585 @@ export function StudyPage() {
     };
 
     return (
-    <div className="h-full w-full flex flex-col min-h-0">
-      <div className="flex-1 flex min-h-0">
-        <div className="w-20 bg-gray-100 flex flex-col items-center py-4 gap-3">
-          <button 
-            onClick={() => navigate("/")}
-            className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-gray-200 text-gray-600 hover:bg-gray-300"
-            title="Home"
-          >
-            <Home className="w-5 h-5" />
-          </button>
-          <button 
-            onClick={() => handleTabChange("upload")}
-            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
-              activeTab === "upload" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-            }`}
-            title="Upload Documents"
-          >
-            <Upload className="w-5 h-5" />
-          </button>
-          <button 
-            onClick={() => handleTabChange("learning")}
-            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
-              activeTab === "learning" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-            }`}
-            title="Learning Hub"
-          >
-            <BookOpen className="w-5 h-5" />
-          </button>
-          <button 
-            onClick={() => handleTabChange("assessment")}
-            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
-              activeTab === "assessment" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-            }`}
-            title="Assessment"
-          >
-            <FileText className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="flex-1 flex flex-col min-h-0">
-          <div ref={containerRef} className="flex-1 flex flex-row overflow-hidden min-h-0">
-            <div 
-              className="border-r border-gray-200 flex flex-col min-w-0 min-h-0"
-              style={{ width: `${sectionWidths[0]}%` }}
+      <div className="h-full w-full flex flex-col min-h-0">
+        <div className="flex-1 flex min-h-0">
+          <div className="w-20 bg-gray-100 flex flex-col items-center py-4 gap-3">
+            <button
+              onClick={() => navigate("/")}
+              className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-gray-200 text-gray-600 hover:bg-gray-300"
+              title="Home"
             >
-              <div className="p-4 border-b border-gray-200 bg-blue-50 flex-shrink-0">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-gray-800">Video Explanation</h4>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full cursor-col-resize"></div>
-                </div>
-              </div>
-              
-              <div className="flex-1 bg-blue-50 flex flex-col min-h-0">
-                {/* Video Section - Fixed at top */}
-                <div className="p-4 pb-2 bg-blue-50 flex-shrink-0">
-                  <div className="flex items-center justify-between mb-3">
-                    <h5 className="font-semibold text-gray-800">Video Explanation</h5>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleRefreshVideo}
-                        disabled={videoLoading}
-                        className="text-xs px-2 py-1 bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors disabled:opacity-50"
-                      >
-                        Refresh
-                      </button>
-                      <button
-                        onClick={handleGenerateVideo}
-                        disabled={videoLoading}
-                        className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-                      >
-                        {videoLoading ? 'Working...' : 'Generate'}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="bg-gray-100 rounded-lg aspect-video flex items-center justify-center overflow-hidden">
-                    {videoLoading ? (
-                      <div className="flex flex-col items-center text-gray-500">
-                        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
-                        <p className="text-sm">Preparing your video...</p>
-                      </div>
-                    ) : videoUrl ? (
-                      <video
-                        key={videoUrl}
-                        src={videoUrl}
-                        controls
-                        autoPlay
-                        muted
-                        loop
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                    ) : (
-                      <div className="text-gray-500 text-center">
-                        <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
-                          <span className="text-2xl">▶</span>
-                        </div>
-                        <p className="text-sm">Video will appear here</p>
-                        <p className="text-xs text-gray-400">Generate a lipsync video to get started</p>
-                      </div>
-                    )}
-                  </div>
-                  {autoPipelineStatus.running && (
-                    <p className="text-xs text-blue-600 mt-2">Auto-generating the latest audio and video...</p>
-                  )}
-                  {autoPipelineStatus.error && (
-                    <p className="text-xs text-red-600 mt-2">{autoPipelineStatus.error}</p>
-                  )}
-                  {videoError && (
-                    <p className="text-xs text-red-600 mt-2">{videoError}</p>
-                  )}
-                </div>
-                
-                {/* Reference Links - Scrollable area */}
-                <div className="flex-1 p-4 pt-2 overflow-y-auto min-h-0 hide-scrollbar">
-                  <div className="space-y-3">
-                    <h5 className="font-semibold text-gray-800">Reference Links</h5>
-                    {linksLoading ? (
-                      <div className="flex items-center justify-center py-4">
-                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                        <span className="ml-2 text-sm text-gray-600">Loading links...</span>
-                      </div>
-                    ) : referenceLinks.length > 0 ? (
-                      <div className="space-y-2">
-                        {referenceLinks.map((link, index) => (
-                          <div key={index} className="p-3 bg-white rounded-lg border hover:bg-gray-50 transition-colors">
-                            <a 
-                              href={link.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="block"
-                            >
-                              <h6 className="text-sm font-medium text-blue-600 hover:text-blue-800 mb-1">
-                                {link.title}
-                              </h6>
-                              {link.description && (
-                                <p className="text-xs text-gray-600 mb-2">{link.description}</p>
-                              )}
-                              <p className="text-xs text-gray-500 break-all">{link.url}</p>
-                            </a>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4">
-                        <p className="text-xs text-gray-500">No reference links available</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Resize handle between AI Tutor and AI Summary */}
-            <div 
-              className="w-1 bg-gray-300 hover:bg-gray-400 cursor-col-resize flex-shrink-0 transition-colors"
-              onMouseDown={(e) => handleMouseDown(e, 1)}
-            ></div>
-
-            <div 
-              className="flex flex-col min-w-0 min-h-0"
-              style={{ width: `${sectionWidths[2]}%` }}
+              <Home className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => handleTabChange("upload")}
+              className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "upload" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                }`}
+              title="Upload Documents"
             >
-              <div className="p-4 border-b border-gray-200 bg-green-50 flex-shrink-0">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-gray-800">AI Summary</h4>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full cursor-col-resize"></div>
-                </div>
-              </div>
-              
-              <div className="flex-1 bg-green-50 flex flex-col min-h-0">
-                {/* Header - Fixed at top */}
-                <div className="p-4 pb-2 bg-green-50 flex-shrink-0">
-                  <div className="bg-white rounded-lg p-4 border">
-                    <div className="flex items-center justify-between mb-3">
-                      <h5 className="font-semibold text-gray-800 flex items-center gap-2">
-                        <BookOpen size={20} className="text-green-600" />
-                        AI Summary
-                      </h5>
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={async () => {
-                            if (!summaryText) {
-                              alert('No summary text available. Please wait for the summary to load.');
-                              return;
-                            }
-                            try {
-                              const fileName = selectedFile || availableFiles[0] || undefined;
-                              if (!fileName) {
-                                alert('Select or upload a document first.');
-                                return;
-                              }
-                              const ttsResult = await apiService.learningTTS(summaryText, fileName);
-                              if (ttsResult.audioUrl) {
-                                const audio = new Audio(ttsResult.audioUrl);
-                                audio.play().catch(err => {
-                                  console.error('Error playing audio:', err);
-                                  alert('Failed to play audio. Please try again.');
-                                });
-                              }
-                              if (ttsResult.videoUrl) {
-                                setVideoUrl(ttsResult.videoUrl);
-                                setVideoError(null);
-                              } else if (fileName) {
-                                await loadLatestVideo(fileName);
-                              }
-                              setAutoPipelineStatus({
-                                running: false,
-                                file: fileName,
-                                error: undefined,
-                                summaryHash: summaryHashValue,
-                                attempted: true
-                              });
-                            } catch (error) {
-                              console.error('Failed to generate TTS:', error);
-                              alert(error instanceof Error ? error.message : 'Failed to generate audio. Please try again.');
-                            }
-                          }}
-                          disabled={!summaryText || textLoading}
-                          className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                          title="Play summary as audio"
-                        >
-                          🔊 Play Audio
-                        </button>
-                        <button 
-                          onClick={async () => {
-                            setTextLoading(true);
-                            try {
-                              // Clear cache and force fresh fetch
-                              localStorage.removeItem('neurolearn_summary_text');
-                              localStorage.removeItem('neurolearn_text_timestamp');
-                              
-                              const text = await apiService.getText();
-                              console.log('Refreshed text from API:', text);
-                              setSummaryText(text);
-                              
-                              // Cache the new text
-                              const now = Date.now();
-                              localStorage.setItem('neurolearn_summary_text', text);
-                              localStorage.setItem('neurolearn_text_timestamp', now.toString());
-                              console.log('💾 Cached refreshed summary text');
-                            } catch (error) {
-                              console.error('Failed to refresh summary text:', error);
-                            } finally {
-                              setTextLoading(false);
-                            }
-                          }}
-                          className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                        >
-                          Refresh
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Content - Scrollable area */}
-                <div className="flex-1 p-4 pt-2 overflow-y-auto min-h-0 hide-scrollbar">
-                  {textLoading ? (
-                    <div className="bg-white rounded-lg p-4 border">
-                      <div className="flex items-center justify-center py-8">
-                        <div className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
-                        <span className="ml-3 text-sm text-gray-600">Loading summary...</span>
-                      </div>
-                    </div>
-                  ) : summaryText ? (
-                    <div className="bg-white rounded-lg p-4 border">
-                      <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {summaryText}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-white rounded-lg p-4 border">
-                      <div className="text-center text-gray-500">
-                        <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <BookOpen size={24} className="text-gray-400" />
-                        </div>
-                        <h5 className="font-semibold text-gray-600 mb-2">AI Summary</h5>
-                        <p className="text-sm text-gray-500">Upload a document to generate AI-powered summaries and key insights</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Resize handle between Video and AI Tutor */}
-            <div 
-              className="w-1 bg-gray-300 hover:bg-gray-400 cursor-col-resize flex-shrink-0 transition-colors"
-              onMouseDown={(e) => handleMouseDown(e, 0)}
-            ></div>
-
-            <div 
-              className="border-r border-gray-200 flex flex-col min-w-0 min-h-0"
-              style={{ width: `${sectionWidths[1]}%` }}
+              <Upload className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => handleTabChange("learning")}
+              className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "learning" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                }`}
+              title="Learning Hub"
             >
-              <div className="p-4 border-b border-gray-200 bg-indigo-50 flex-shrink-0">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-gray-800">AI Tutor</h4>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">Saved</span>
-                    <div className="w-6 h-6 bg-gray-300 rounded flex items-center justify-center">
-                      <span className="text-xs">🔔</span>
-                    </div>
+              <BookOpen className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => handleTabChange("assessment")}
+              className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "assessment" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                }`}
+              title="Assessment"
+            >
+              <FileText className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 flex flex-col min-h-0">
+            <div ref={containerRef} className="flex-1 flex flex-row overflow-hidden min-h-0">
+              <div
+                className="border-r border-gray-200 flex flex-col min-w-0 min-h-0"
+                style={{ width: `${sectionWidths[0]}%` }}
+              >
+                <div className="p-4 border-b border-gray-200 bg-blue-50 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-gray-800">Video Explanation</h4>
                     <div className="w-2 h-2 bg-gray-400 rounded-full cursor-col-resize"></div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex-1 bg-indigo-50 flex flex-col min-h-0">
-                {/* File Selector - Fixed at top */}
-                <div className="p-4 pb-2 bg-indigo-50 flex-shrink-0">
-                  <div className="bg-white rounded-lg p-3 border">
-                    <div className="flex items-center gap-3">
-                      <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                        Ask about:
-                      </label>
-                      <select
-                        value={selectedFile}
-                        onChange={(e) => setSelectedFile(e.target.value)}
-                        disabled={filesLoading}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-                      >
-                        {filesLoading ? (
-                          <option>Loading files...</option>
-                        ) : availableFiles.length > 0 ? (
-                          availableFiles.map((file) => (
-                            <option key={file} value={file}>
-                              {file}
-                            </option>
-                          ))
-                        ) : (
-                          <option>No files available</option>
-                        )}
-                      </select>
-                      <button
-                        onClick={async () => {
-                          setFilesLoading(true);
-                          try {
-                            // Clear cache and force fresh fetch
-                            localStorage.removeItem('neurolearn_available_files');
-                            localStorage.removeItem('neurolearn_files_timestamp');
-                            
-                            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/files`);
-                            if (response.ok) {
-                              const fileList = await response.json();
-                              setAvailableFiles(fileList);
-                              // Update selected file if current one is no longer available
-                              if (fileList.length > 0 && !fileList.includes(selectedFile)) {
-                                setSelectedFile(fileList[0]);
-                              }
-                              
-                              // Cache the new files
-                              const now = Date.now();
-                              localStorage.setItem('neurolearn_available_files', JSON.stringify(fileList));
-                              localStorage.setItem('neurolearn_files_timestamp', now.toString());
-                              console.log('💾 Cached refreshed available files');
-                            }
-                          } catch (error) {
-                            console.error('Error refreshing files:', error);
-                          } finally {
-                            setFilesLoading(false);
-                          }
-                        }}
-                        disabled={filesLoading}
-                        className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors disabled:opacity-50"
-                        title="Refresh file list"
-                      >
-                        🔄
-                      </button>
-                      {selectedFile && (
-                        <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                          {availableFiles.indexOf(selectedFile) + 1} of {availableFiles.length}
+
+                <div className="flex-1 bg-blue-50 flex flex-col min-h-0">
+                  {/* Video Section - Fixed at top */}
+                  <div className="p-4 pb-2 bg-blue-50 flex-shrink-0">
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="font-semibold text-gray-800">Video Explanation</h5>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleRefreshVideo}
+                          disabled={videoLoading}
+                          className="text-xs px-2 py-1 bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors disabled:opacity-50"
+                        >
+                          Refresh
+                        </button>
+                        <button
+                          onClick={handleGenerateVideo}
+                          disabled={videoLoading}
+                          className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
+                          {videoLoading ? 'Working...' : 'Generate'}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="bg-gray-100 rounded-lg aspect-video flex items-center justify-center overflow-hidden">
+                      {videoLoading ? (
+                        <div className="flex flex-col items-center text-gray-500">
+                          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+                          <p className="text-sm">Preparing your video...</p>
+                        </div>
+                      ) : videoUrl ? (
+                        <video
+                          key={videoUrl}
+                          src={videoUrl}
+                          controls
+                          autoPlay
+                          muted
+                          loop
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="text-gray-500 text-center">
+                          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <span className="text-2xl">▶</span>
+                          </div>
+                          <p className="text-sm">Video will appear here</p>
+                          <p className="text-xs text-gray-400">Generate a lipsync video to get started</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {videoError && (
+                      <p className="text-xs text-red-600 mt-2">{videoError}</p>
+                    )}
+                  </div>
+
+                  {/* Reference Links - Scrollable area */}
+                  <div className="flex-1 p-4 pt-2 overflow-y-auto min-h-0 hide-scrollbar">
+                    <div className="space-y-3">
+                      <h5 className="font-semibold text-gray-800">Reference Links</h5>
+                      {linksLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                          <span className="ml-2 text-sm text-gray-600">Loading links...</span>
+                        </div>
+                      ) : referenceLinks.length > 0 ? (
+                        <div className="space-y-2">
+                          {referenceLinks.map((link, index) => (
+                            <div key={index} className="p-3 bg-white rounded-lg border hover:bg-gray-50 transition-colors">
+                              <a
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block"
+                              >
+                                <h6 className="text-sm font-medium text-blue-600 hover:text-blue-800 mb-1">
+                                  {link.title}
+                                </h6>
+                                {link.description && (
+                                  <p className="text-xs text-gray-600 mb-2">{link.description}</p>
+                                )}
+                                <p className="text-xs text-gray-500 break-all">{link.url}</p>
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4">
+                          <p className="text-xs text-gray-500">No reference links available</p>
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
-                
-                {/* Chat Messages - Scrollable area */}
-                <div ref={chatScrollRef} className="flex-1 p-4 pt-2 overflow-y-auto min-h-0 hide-scrollbar">
-                  <div className="space-y-3">
-                    {chatMessages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-[80%] rounded-lg px-3 py-2 ${
-                            message.type === 'user'
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-white text-gray-800 border'
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                          <p className={`text-xs mt-1 ${
-                            message.type === 'user' ? 'text-indigo-100' : 'text-gray-500'
-                          }`}>
-                            {message.timestamp.toLocaleTimeString()}
-                          </p>
+              </div>
+
+              {/* Resize handle between AI Tutor and AI Summary */}
+              <div
+                className="w-1 bg-gray-300 hover:bg-gray-400 cursor-col-resize flex-shrink-0 transition-colors"
+                onMouseDown={(e) => handleMouseDown(e, 1)}
+              ></div>
+
+              <div
+                className="flex flex-col min-w-0 min-h-0"
+                style={{ width: `${sectionWidths[2]}%` }}
+              >
+                <div className="p-4 border-b border-gray-200 bg-green-50 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-gray-800">AI Summary</h4>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full cursor-col-resize"></div>
+                  </div>
+                </div>
+
+                <div className="flex-1 bg-green-50 flex flex-col min-h-0">
+                  {/* Header - Fixed at top */}
+                  <div className="p-4 pb-2 bg-green-50 flex-shrink-0">
+                    <div className="bg-white rounded-lg p-4 border">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-semibold text-gray-800 flex items-center gap-2">
+                          <BookOpen size={20} className="text-green-600" />
+                          AI Summary
+                        </h5>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={async () => {
+                              if (!summaryText) {
+                                alert('No summary text available. Please wait for the summary to load.');
+                                return;
+                              }
+                              try {
+                                const fileName = selectedFile || availableFiles[0] || undefined;
+                                if (!fileName) {
+                                  alert('Select or upload a document first.');
+                                  return;
+                                }
+                                const ttsResult = await apiService.learningTTS(summaryText, fileName);
+                                if (ttsResult.audioUrl) {
+                                  const audio = new Audio(ttsResult.audioUrl);
+                                  audio.play().catch(err => {
+                                    console.error('Error playing audio:', err);
+                                    alert('Failed to play audio. Please try again.');
+                                  });
+                                }
+                                if (ttsResult.videoUrl) {
+                                  setVideoUrl(ttsResult.videoUrl);
+                                  setVideoError(null);
+                                } else if (fileName) {
+                                  await loadLatestVideo(fileName);
+                                }
+
+                              } catch (error) {
+                                console.error('Failed to generate TTS:', error);
+                                alert(error instanceof Error ? error.message : 'Failed to generate audio. Please try again.');
+                              }
+                            }}
+                            disabled={!summaryText || textLoading}
+                            className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                            title="Play summary as audio"
+                          >
+                            🔊 Play Audio
+                          </button>
+                          <button
+                            onClick={async () => {
+                              setTextLoading(true);
+                              try {
+                                // Clear cache and force fresh fetch
+                                localStorage.removeItem('neurolearn_summary_text');
+                                localStorage.removeItem('neurolearn_text_timestamp');
+
+                                const { text, images, fileName } = await apiService.getText();
+                                console.log('Refreshed text from API:', text);
+                                setSummaryText(text);
+
+                                // Construct direct S3 URLs if fileName is available
+                                let finalImages = images;
+                                if (fileName) {
+                                  const cleanName = fileName.replace(/\.[^/.]+$/, "");
+                                  const bucketUrl = "https://adarsh-demo-neurolearn.s3.ap-southeast-2.amazonaws.com/learning-images";
+                                  const constructedUrls = [1, 2, 3, 4].map(i =>
+                                    `${bucketUrl}/${cleanName}/${cleanName}-learning-image-${i}.png`
+                                  );
+                                  finalImages = constructedUrls;
+                                }
+
+                                setSummaryImages(finalImages);
+
+                                // Cache the new text
+                                const now = Date.now();
+                                localStorage.setItem('neurolearn_summary_text', text);
+                                localStorage.setItem('neurolearn_summary_images', JSON.stringify(finalImages));
+                                localStorage.setItem('neurolearn_text_timestamp', now.toString());
+                                console.log('💾 Cached refreshed summary text');
+                              } catch (error) {
+                                console.error('Failed to refresh summary text:', error);
+                              } finally {
+                                setTextLoading(false);
+                              }
+                            }}
+                            className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                          >
+                            Refresh
+                          </button>
                         </div>
                       </div>
-                    ))}
-                    {isProcessing && (
-                      <div className="flex justify-start">
-                        <div className="bg-white rounded-lg px-3 py-2 border">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                            <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                    </div>
+                  </div>
+
+                  {/* Content - Scrollable area */}
+                  {/* Content - Scrollable area */}
+                  <div className="flex-1 p-4 pt-2 overflow-y-auto min-h-0 hide-scrollbar">
+                    {textLoading ? (
+                      <div className="bg-white rounded-lg p-4 border">
+                        <div className="flex items-center justify-center py-8">
+                          <div className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                          <span className="ml-3 text-sm text-gray-600">Loading summary...</span>
+                        </div>
+                      </div>
+                    ) : summaryText ? (
+                      <div className="bg-white rounded-lg p-4 border space-y-6">
+                        {/* Logic to split text and interleave images */}
+                        {(() => {
+                          // Simple split into two halves
+                          const midPoint = Math.floor(summaryText.length / 2);
+                          // Find nearest period to avoid cutting sentences
+                          let splitIndex = summaryText.indexOf('.', midPoint);
+                          if (splitIndex === -1) splitIndex = midPoint; // Fallback
+                          else splitIndex += 1; // Include the period
+
+                          const part1 = summaryText.slice(0, splitIndex);
+                          const part2 = summaryText.slice(splitIndex);
+
+                          const firstRowImages = summaryImages.slice(0, 2);
+                          const secondRowImages = summaryImages.slice(2);
+
+                          return (
+                            <>
+                              {/* First Text Part */}
+                              <div className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none">
+                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                  {part1}
+                                </ReactMarkdown>
+                              </div>
+
+                              {/* First Image Row */}
+                              {firstRowImages.length > 0 && (
+                                <div className="grid grid-cols-2 gap-4 my-4">
+                                  {firstRowImages.map((imgUrl, idx) => (
+                                    <div
+                                      key={`row1-${idx}`}
+                                      className="rounded-lg overflow-hidden border border-gray-200 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                                      onClick={() => setZoomedImage(imgUrl)}
+                                    >
+                                      <img
+                                        src={imgUrl}
+                                        alt="Educational Diagram"
+                                        className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
+                                        loading="lazy"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Second Text Part */}
+                              <div className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none">
+                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                  {part2}
+                                </ReactMarkdown>
+                              </div>
+
+                              {/* Second Image Row (Remaining images) */}
+                              {secondRowImages.length > 0 && (
+                                <div className="grid grid-cols-2 gap-4 my-4">
+                                  {secondRowImages.map((imgUrl, idx) => (
+                                    <div
+                                      key={`row2-${idx}`}
+                                      className="rounded-lg overflow-hidden border border-gray-200 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                                      onClick={() => setZoomedImage(imgUrl)}
+                                    >
+                                      <img
+                                        src={imgUrl}
+                                        alt="Educational Diagram"
+                                        className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
+                                        loading="lazy"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    ) : (
+                      <div className="bg-white rounded-lg p-4 border">
+                        <div className="text-center text-gray-500">
+                          <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <BookOpen size={24} className="text-gray-400" />
                           </div>
+                          <h5 className="font-semibold text-gray-600 mb-2">AI Summary</h5>
+                          <p className="text-sm text-gray-500">Upload a document to generate AI-powered summaries and key insights</p>
                         </div>
                       </div>
                     )}
                   </div>
-                </div>
-              </div>
-              
-              <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="Type your question..." 
-                    value={currentMessage}
-                    onChange={(e) => setCurrentMessage(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !isProcessing) {
-                        sendTextMessage();
-                      }
-                    }}
-                    disabled={isProcessing}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-                  />
-                  
-                  {/* Mic Button */}
-                  {!isRecording ? (
-                    <button 
-                      onClick={startRecording}
-                      disabled={isProcessing}
-                      className="w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center"
-                      title="Start voice recording"
-                    >
-                      🎤
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={stopRecording}
-                      className="w-8 h-8 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center animate-pulse"
-                      title="Stop recording"
-                    >
-                      ⏹️
-                    </button>
-                  )}
-                  
-                  {/* Send Button */}
-                  <button 
-                    onClick={sendTextMessage}
-                    disabled={isProcessing || !currentMessage.trim()}
-                    className="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                    title="Send message"
-                  >
-                    <span className="text-sm">↑</span>
-                  </button>
-                </div>
-                
-                {/* Recording Status */}
-                {isRecording && (
-                  <div className="mt-2 text-center">
-                    <p className="text-xs text-red-600 flex items-center justify-center gap-1">
-                      <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
-                      Recording... Click stop when done
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
 
-            
+                  {/* Image Zoom Modal */}
+                  {zoomedImage && (
+                    <div
+                      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+                      onClick={() => setZoomedImage(null)}
+                    >
+                      <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center">
+                        <button
+                          className="absolute -top-10 right-0 text-white hover:text-gray-300"
+                          onClick={() => setZoomedImage(null)}
+                        >
+                          <span className="text-2xl">&times;</span> Close
+                        </button>
+                        <img
+                          src={zoomedImage}
+                          alt="Zoomed View"
+                          className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-white"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Resize handle between Video and AI Tutor */}
+              <div
+                className="w-1 bg-gray-300 hover:bg-gray-400 cursor-col-resize flex-shrink-0 transition-colors"
+                onMouseDown={(e) => handleMouseDown(e, 0)}
+              ></div>
+
+              <div
+                className="border-r border-gray-200 flex flex-col min-w-0 min-h-0"
+                style={{ width: `${sectionWidths[1]}%` }}
+              >
+                <div className="p-4 border-b border-gray-200 bg-indigo-50 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-gray-800">AI Tutor</h4>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">Saved</span>
+                      <div className="w-6 h-6 bg-gray-300 rounded flex items-center justify-center">
+                        <span className="text-xs">🔔</span>
+                      </div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full cursor-col-resize"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 bg-indigo-50 flex flex-col min-h-0">
+                  {/* File Selector - Fixed at top */}
+                  <div className="p-4 pb-2 bg-indigo-50 flex-shrink-0">
+                    <div className="bg-white rounded-lg p-3 border">
+                      <div className="flex items-center gap-3">
+                        <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                          Ask about:
+                        </label>
+                        <select
+                          value={selectedFile}
+                          onChange={(e) => setSelectedFile(e.target.value)}
+                          disabled={filesLoading}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                        >
+                          {filesLoading ? (
+                            <option>Loading files...</option>
+                          ) : availableFiles.length > 0 ? (
+                            availableFiles.map((file) => (
+                              <option key={file} value={file}>
+                                {file}
+                              </option>
+                            ))
+                          ) : (
+                            <option>No files available</option>
+                          )}
+                        </select>
+                        <button
+                          onClick={async () => {
+                            setFilesLoading(true);
+                            try {
+                              // Clear cache and force fresh fetch
+                              localStorage.removeItem('neurolearn_available_files');
+                              localStorage.removeItem('neurolearn_files_timestamp');
+
+                              const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/files`);
+                              if (response.ok) {
+                                const fileList = await response.json();
+                                setAvailableFiles(fileList);
+                                // Update selected file if current one is no longer available
+                                if (fileList.length > 0 && !fileList.includes(selectedFile)) {
+                                  setSelectedFile(fileList[0]);
+                                }
+
+                                // Cache the new files
+                                const now = Date.now();
+                                localStorage.setItem('neurolearn_available_files', JSON.stringify(fileList));
+                                localStorage.setItem('neurolearn_files_timestamp', now.toString());
+                                console.log('💾 Cached refreshed available files');
+                              }
+                            } catch (error) {
+                              console.error('Error refreshing files:', error);
+                            } finally {
+                              setFilesLoading(false);
+                            }
+                          }}
+                          disabled={filesLoading}
+                          className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors disabled:opacity-50"
+                          title="Refresh file list"
+                        >
+                          🔄
+                        </button>
+                        {selectedFile && (
+                          <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                            {availableFiles.indexOf(selectedFile) + 1} of {availableFiles.length}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chat Messages - Scrollable area */}
+                  <div ref={chatScrollRef} className="flex-1 p-4 pt-2 overflow-y-auto min-h-0 hide-scrollbar">
+                    <div className="space-y-3">
+                      {chatMessages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-[80%] rounded-lg px-3 py-2 ${message.type === 'user'
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-white text-gray-800 border'
+                              }`}
+                          >
+                            <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
+                              <div className="response-container">
+                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                  {message.content}
+                                </ReactMarkdown>
+                              </div>
+                            </div>
+                            <p className={`text-xs mt-1 ${message.type === 'user' ? 'text-indigo-100' : 'text-gray-500'
+                              }`}>
+                              {message.timestamp.toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {isProcessing && (
+                        <div className="flex justify-start">
+                          <div className="bg-white rounded-lg px-3 py-2 border">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"></div>
+                              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Type your question..."
+                      value={currentMessage}
+                      onChange={(e) => setCurrentMessage(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && !isProcessing) {
+                          sendTextMessage();
+                        }
+                      }}
+                      disabled={isProcessing}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                    />
+
+                    {/* Mic Button */}
+                    {!isRecording ? (
+                      <button
+                        onClick={startRecording}
+                        disabled={isProcessing}
+                        className="w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center"
+                        title="Start voice recording"
+                      >
+                        <Mic className="w-4 h-4" />
+
+                      </button>
+                    ) : (
+                      <button
+                        onClick={stopRecording}
+                        className="w-8 h-8 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center animate-pulse"
+                        title="Stop recording"
+                      >
+                        <Square className="w-4 h-4" />
+
+                      </button>
+                    )}
+
+                    {/* Send Button */}
+                    <button
+                      onClick={sendTextMessage}
+                      disabled={isProcessing || !currentMessage.trim()}
+                      className="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                      title="Send message"
+                    >
+                      <span className="text-sm">↑</span>
+                    </button>
+                  </div>
+
+                  {/* Recording Status */}
+                  {isRecording && (
+                    <div className="mt-2 text-center">
+                      <p className="text-xs text-red-600 flex items-center justify-center gap-1">
+                        <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
+                        Recording... Click stop when done
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+
+            </div>
           </div>
         </div>
       </div>
-    </div>
     );
   };
 
@@ -1761,7 +2090,7 @@ export function StudyPage() {
   return (
     <div className={`h-screen w-screen bg-white flex flex-col overflow-hidden min-h-0 ${isResizing ? 'cursor-col-resize' : ''}`}>
       <div className="flex items-center gap-4 py-4 px-6 bg-white border-b border-gray-200 flex-shrink-0">
-        <button 
+        <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
         >
@@ -1772,11 +2101,11 @@ export function StudyPage() {
         </button>
         <div className="h-4 w-px bg-gray-300"></div>
         <h1 className="text-lg font-semibold text-gray-800">
-          {activeTab === "upload" ? "Upload Documents" : 
-           activeTab === "learning" ? "Learning Hub" : 
-           "Assessment"}
+          {activeTab === "upload" ? "Upload Documents" :
+            activeTab === "learning" ? "Learning Hub" :
+              "Assessment"}
         </h1>
-        
+
         {/* Backend Connection Status */}
         <div className="flex items-center gap-2 ml-auto">
           {backendConnected === null && (
