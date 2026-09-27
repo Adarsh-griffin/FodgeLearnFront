@@ -364,10 +364,18 @@ class ApiService {
   // Test connection
   async testConnection(): Promise<boolean> {
     try {
+      const response = await fetch(`${this.baseURL}/api/health`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+      });
+      if (response.ok) {
+        return true;
+      }
+      // Fallback check to getFiles
       await this.getFiles();
       return true;
     } catch (error) {
-      console.error('Backend connection test failed:', error);
+      console.warn('Backend connection test failed:', error);
       return false;
     }
   }

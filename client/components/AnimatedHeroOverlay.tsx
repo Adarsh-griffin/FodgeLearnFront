@@ -13,8 +13,6 @@ export function AnimatedHeroOverlay() {
           display: "block",
           mixBlendMode: "multiply"
         }}
-        onLoad={() => console.log("GIF loaded successfully")}
-        onError={(e) => console.error("GIF failed to load:", e)}
       />
     </div>
   );

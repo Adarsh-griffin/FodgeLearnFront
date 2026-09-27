@@ -91,12 +91,6 @@ export function Home() {
 
 
 
-          {/* UI Interface Toggle Button */}
-          <div className="text-center mt-8">
-            <button className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-lg">
-              View Different Interface
-            </button>
-          </div>
         </div>
 
 

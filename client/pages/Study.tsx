@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Upload, CheckCircle, MessageCircle, BookOpen, FileText, RotateCcw, ArrowLeft, Home, XCircle, Eye, EyeOff } from "lucide-react";
-import { apiService, UploadResponse, QAResponse, ReferenceLink, ProcessingStatus, AssessmentQuestion, AssessmentFeedback } from "@/lib/api";
+import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff } from "lucide-react";
+import { apiService, UploadResponse, ReferenceLink, ProcessingStatus, AssessmentQuestion, AssessmentFeedback } from "@/lib/api";
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import remarkMath from 'remark-math';
@@ -153,13 +153,6 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
           >
             <BookOpen className="w-5 h-5" />
           </button>
-          {/* <button 
-            onClick={() => setActiveTab("qa")}
-            className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-gray-200 text-gray-600 hover:bg-gray-300"
-            title="Q&A Assistant"
-          >
-            <MessageCircle className="w-5 h-5" />
-          </button> */}
           <button
             onClick={() => handleTabChange("assessment")}
             className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-indigo-100 text-indigo-600"
@@ -615,29 +608,32 @@ export function StudyPage() {
       localStorage.removeItem('neurolearn_text_timestamp');
       localStorage.removeItem('neurolearn_reference_links');
       localStorage.removeItem('neurolearn_links_timestamp');
-      console.log('🗑️ Cleared cache when switching to Learning tab');
     }
     setActiveTab(tab);
   };
 
-  // Test backend connection on component mount
+  // Test backend connection one time on component mount
   useEffect(() => {
+    let isMounted = true;
     const testConnection = async () => {
       try {
         const connected = await apiService.testConnection();
-        setBackendConnected(connected);
-        if (connected) {
-          console.log('✅ Backend connection successful');
-        } else {
-          console.log('❌ Backend connection failed');
+        if (isMounted) {
+          setBackendConnected(connected);
+          console.log(`[FE-DEBUG] Backend Connection Status: ${connected ? 'CONNECTED (Green)' : 'DISCONNECTED (Red)'}`);
         }
       } catch (error) {
-        console.error('❌ Backend connection test failed:', error);
-        setBackendConnected(false);
+        if (isMounted) {
+          console.warn('[FE-DEBUG] Backend connection check failed:', error);
+          setBackendConnected(false);
+        }
       }
     };
 
     testConnection();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -700,8 +696,6 @@ export function StudyPage() {
           // Complete progress
           setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
 
-          console.log('Upload successful:', response);
-
           // Clear cache when new document is uploaded
           localStorage.removeItem('neurolearn_summary_text');
           localStorage.removeItem('neurolearn_text_timestamp');
@@ -709,7 +703,6 @@ export function StudyPage() {
           localStorage.removeItem('neurolearn_links_timestamp');
           localStorage.removeItem('neurolearn_available_files');
           localStorage.removeItem('neurolearn_files_timestamp');
-          console.log('🗑️ Cleared cache for new document upload');
 
           // Start polling for processing status
           if (response.filename) {
@@ -729,22 +722,6 @@ export function StudyPage() {
         }
       }
     }
-  };
-
-  const simulateUpload = (file: File) => {
-    const fileName = file.name;
-    setUploadProgress((prev) => ({ ...prev, [fileName]: 0 }));
-
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        const current = prev[fileName] || 0;
-        if (current >= 100) {
-          clearInterval(interval);
-          return { ...prev, [fileName]: 100 };
-        }
-        return { ...prev, [fileName]: current + 10 };
-      });
-    }, 200);
   };
 
   const removeFile = (fileName: string) => {
@@ -774,14 +751,11 @@ export function StudyPage() {
 
       if (status.status === 'completed') {
         setSuccessMessages(prev => ({ ...prev, [filename]: true }));
-        console.log(`✅ Processing completed for ${filename}`);
 
-        // Clear cache when processing is completed to ensure fresh data
         localStorage.removeItem('neurolearn_summary_text');
         localStorage.removeItem('neurolearn_text_timestamp');
         localStorage.removeItem('neurolearn_reference_links');
         localStorage.removeItem('neurolearn_links_timestamp');
-        console.log('🗑️ Cleared cache after processing completion');
       } else if (status.status === 'processing') {
         // Continue polling every 3 seconds
         setTimeout(() => pollProcessingStatus(filename), 3000);
@@ -1084,7 +1058,6 @@ export function StudyPage() {
           try {
             const links = JSON.parse(cachedLinks);
             setReferenceLinks(links);
-            console.log('📦 Loaded reference links from cache');
             return;
           } catch (error) {
             console.error('Failed to parse cached links:', error);
@@ -1099,7 +1072,6 @@ export function StudyPage() {
           // Cache the links
           localStorage.setItem('neurolearn_reference_links', JSON.stringify(links));
           localStorage.setItem('neurolearn_links_timestamp', now.toString());
-          console.log('💾 Cached reference links');
         } catch (error) {
           console.error('Failed to load reference links:', error);
           setReferenceLinks([]);
@@ -1131,14 +1103,12 @@ export function StudyPage() {
               console.error('Failed to parse cached images:', e);
             }
           }
-          console.log('📦 Loaded summary text from cache');
           return;
         }
 
         setTextLoading(true);
         try {
           const { text, images, fileName } = await apiService.getText();
-          console.log('Fetched text from API:', text);
           setSummaryText(text);
 
           // Construct direct S3 URLs if fileName is available
@@ -1151,7 +1121,6 @@ export function StudyPage() {
               `${bucketUrl}/${cleanName}/${cleanName}-learning-image-${i}.png`
             );
             finalImages = constructedUrls;
-            console.log('Using constructed S3 URLs:', finalImages);
           }
 
           setSummaryImages(finalImages);
@@ -1160,7 +1129,6 @@ export function StudyPage() {
           localStorage.setItem('neurolearn_summary_text', text);
           localStorage.setItem('neurolearn_summary_images', JSON.stringify(finalImages));
           localStorage.setItem('neurolearn_text_timestamp', now.toString());
-          console.log('💾 Cached summary text');
         } catch (error) {
           console.error('Failed to load summary text:', error);
           setSummaryText('');
@@ -1191,7 +1159,6 @@ export function StudyPage() {
             if (fileList.length > 0 && !selectedFile) {
               setSelectedFile(fileList[0]);
             }
-            console.log('📦 Loaded available files from cache');
             return;
           } catch (error) {
             console.error('Failed to parse cached files:', error);
@@ -1212,7 +1179,6 @@ export function StudyPage() {
             // Cache the files
             localStorage.setItem('neurolearn_available_files', JSON.stringify(fileList));
             localStorage.setItem('neurolearn_files_timestamp', now.toString());
-            console.log('💾 Cached available files');
           }
         } catch (error) {
           console.error('Error loading available files:', error);
@@ -1253,6 +1219,19 @@ export function StudyPage() {
     useEffect(() => {
       loadLatestVideo(selectedFile);
     }, [selectedFile, loadLatestVideo]);
+
+    // Auto-poll for new videos every 10 seconds
+    useEffect(() => {
+      // Don't poll if we already have a video for this file
+      if (videoUrl) return;
+
+      const pollInterval = setInterval(() => {
+        loadLatestVideo(selectedFile);
+      }, 10000); // Poll every 10 seconds
+
+      return () => clearInterval(pollInterval); // Cleanup on unmount
+    }, [selectedFile, loadLatestVideo, videoUrl]);
+
 
 
 
@@ -1307,25 +1286,10 @@ export function StudyPage() {
     useEffect(() => {
       try {
         localStorage.setItem('neurolearn_chat_history', JSON.stringify(chatMessages));
-        console.log('💾 Saved chat history to cache');
       } catch (error) {
         console.error('Failed to save chat history to cache:', error);
       }
     }, [chatMessages]);
-
-    // Helper function to get the latest processed filename
-    const getLatestProcessedFile = async () => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/files`);
-        if (response.ok) {
-          const fileList = await response.json();
-          return fileList.length > 0 ? fileList[0] : 'keph101.pdf';
-        }
-      } catch (error) {
-        console.error('Error getting file list:', error);
-      }
-      return 'keph101.pdf'; // Fallback
-    };
 
     // Chat functions
     const startRecording = async () => {
@@ -1485,8 +1449,8 @@ export function StudyPage() {
               audio.play();
             }
           }
-        } catch (ttsError) {
-          console.log('TTS not available:', ttsError);
+        } catch {
+          // TTS is optional for text chat replies
         }
 
       } catch (error) {
@@ -1586,9 +1550,9 @@ export function StudyPage() {
                           key={videoUrl}
                           src={videoUrl}
                           controls
-                          autoPlay
-                          muted
+                          preload="metadata"
                           loop
+                          playsInline
                           className="w-full h-full object-cover rounded-lg"
                         />
                       ) : (
@@ -1721,7 +1685,6 @@ export function StudyPage() {
                                 localStorage.removeItem('neurolearn_text_timestamp');
 
                                 const { text, images, fileName } = await apiService.getText();
-                                console.log('Refreshed text from API:', text);
                                 setSummaryText(text);
 
                                 // Construct direct S3 URLs if fileName is available
@@ -1742,7 +1705,6 @@ export function StudyPage() {
                                 localStorage.setItem('neurolearn_summary_text', text);
                                 localStorage.setItem('neurolearn_summary_images', JSON.stringify(finalImages));
                                 localStorage.setItem('neurolearn_text_timestamp', now.toString());
-                                console.log('💾 Cached refreshed summary text');
                               } catch (error) {
                                 console.error('Failed to refresh summary text:', error);
                               } finally {
@@ -1758,7 +1720,6 @@ export function StudyPage() {
                     </div>
                   </div>
 
-                  {/* Content - Scrollable area */}
                   {/* Content - Scrollable area */}
                   <div className="flex-1 p-4 pt-2 overflow-y-auto min-h-0 hide-scrollbar">
                     {textLoading ? (
@@ -1951,7 +1912,6 @@ export function StudyPage() {
                                 const now = Date.now();
                                 localStorage.setItem('neurolearn_available_files', JSON.stringify(fileList));
                                 localStorage.setItem('neurolearn_files_timestamp', now.toString());
-                                console.log('💾 Cached refreshed available files');
                               }
                             } catch (error) {
                               console.error('Error refreshing files:', error);
