@@ -13,6 +13,23 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        // Replaces (not appends to) Tailwind's default sans stack, so this
+        // also becomes the font Tailwind's own preflight `html` rule uses -
+        // previously Inter was @import'd in global.css but never actually
+        // applied anywhere, so the whole app silently rendered in the
+        // browser's default system font.
+        sans: [
+          '"Plus Jakarta Sans"',
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
+          '"Apple Color Emoji"',
+          '"Segoe UI Emoji"',
+          "Segoe UI Symbol",
+          '"Noto Color Emoji"',
+        ],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

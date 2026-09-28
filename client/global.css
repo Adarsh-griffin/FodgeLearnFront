@@ -1,5 +1,5 @@
 /** @import must precede all other statements */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -707,20 +707,26 @@
 }
 
 /* Blue -> purple: the 2-stop slice used for buttons, badges and text
-   gradients, where the surface needs to stay legible/contrasty end to end. */
+   gradients, where the surface needs to stay legible/contrasty end to end.
+   background-image (not the `background` shorthand) is required here:
+   the shorthand resets background-clip to its initial value, which
+   silently cancelled Tailwind's bg-clip-text on the hero headline (the
+   gradient rendered as an opaque block instead of clipping to the text)
+   because this rule comes after .bg-clip-text in the compiled stylesheet
+   and they tie on specificity. */
 .gradient-brand {
-  background: linear-gradient(135deg, hsl(229 100% 65%), hsl(257 100% 68%));
+  background-image: linear-gradient(135deg, hsl(229 100% 65%), hsl(257 100% 68%));
 }
 
 .gradient-gold {
-  background: linear-gradient(135deg, hsl(17 100% 68%), hsl(32 95% 60%));
+  background-image: linear-gradient(135deg, hsl(17 100% 68%), hsl(32 95% 60%));
 }
 
 /* The full brand spectrum (navy -> blue -> purple -> orange), for large
    section backgrounds only - stops before the pale cream swatch on
    purpose, since white text over #FFECC7 has no contrast. */
 .gradient-spectrum {
-  background: linear-gradient(
+  background-image: linear-gradient(
     120deg,
     hsl(221 69% 14%) 0%,
     hsl(229 100% 65%) 35%,

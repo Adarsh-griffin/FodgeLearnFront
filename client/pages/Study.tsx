@@ -141,11 +141,18 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
         {/* Left Sidebar */}
         <div className="w-16 sm:w-20 bg-secondary flex flex-col items-center py-4 gap-3">
           <button
-            onClick={() => handleTabChange("upload")}
+            onClick={() => navigate("/")}
             className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-            title="Upload Documents"
+            title="Home"
           >
-            <Upload className="w-5 h-5" />
+            <Home className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => handleTabChange("tutor")}
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
+            title="AI Tutor"
+          >
+            <GraduationCap className="w-5 h-5" />
           </button>
           <button
             onClick={() => handleTabChange("learning")}
@@ -155,18 +162,18 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
             <BookOpen className="w-5 h-5" />
           </button>
           <button
+            onClick={() => handleTabChange("upload")}
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
+            title="Upload Documents"
+          >
+            <Upload className="w-5 h-5" />
+          </button>
+          <button
             onClick={() => handleTabChange("assessment")}
             className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors bg-primary/10 text-primary"
             title="Assessment"
           >
             <FileText className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => handleTabChange("tutor")}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-            title="AI Tutor"
-          >
-            <GraduationCap className="w-5 h-5" />
           </button>
         </div>
 
@@ -583,6 +590,67 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
   );
 };
 
+/**
+ * Its own local `topicName` state, not lifted to StudyPage. Lifting it used
+ * to make StudyPage re-render on every keystroke, which redefined the
+ * inline UploadTab function (its identity changes every StudyPage render)
+ * and made React remount the whole tab - including this input - after
+ * every single character, dropping focus each time. Keeping the fast-
+ * changing state local to this stable, top-level component avoids that
+ * entirely; it only calls up to StudyPage via onSubmit, once, on submit.
+ */
+function TopicInputForm({
+  onSubmit,
+  isSubmitting,
+}: {
+  onSubmit: (topicName: string) => void;
+  isSubmitting: boolean;
+}) {
+  const [topicName, setTopicName] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = topicName.trim();
+    if (!trimmed || isSubmitting) return;
+    onSubmit(trimmed);
+    setTopicName("");
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-4 flex flex-col sm:flex-row gap-3">
+      <div className="relative flex-1">
+        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-indigo-400">
+          <BookOpen className="w-5 h-5" />
+        </div>
+        <input
+          type="text"
+          value={topicName}
+          onChange={(e) => setTopicName(e.target.value)}
+          placeholder="e.g. Quantum Computing, Photosynthesis, Neural Networks..."
+          className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={!topicName.trim() || isSubmitting}
+        className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+      >
+        {isSubmitting ? (
+          <>
+            <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+            <span>Creating Module...</span>
+          </>
+        ) : (
+          <>
+            <Sparkles className="w-4 h-4" />
+            <span>START LEARNING</span>
+          </>
+        )}
+      </button>
+    </form>
+  );
+}
+
 export function StudyPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -595,7 +663,6 @@ export function StudyPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Topic Learning State
-  const [topicInput, setTopicInput] = useState("");
   const [isSubmittingTopic, setIsSubmittingTopic] = useState(false);
 
   const createMinimalPdfBlob = (topicName: string): File => {
@@ -633,15 +700,17 @@ startxref
     return new File([blob], fileName, { type: 'application/pdf' });
   };
 
-  const handleTopicSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!topicInput.trim() || isSubmittingTopic) return;
+  // Takes the topic name as a parameter (from TopicInputForm's own local
+  // state) rather than reading lifted state - see TopicInputForm's comment
+  // for why: keystroke state living here caused UploadTab (an inline
+  // function redefined on every StudyPage render) to remount on every
+  // character typed, dropping input focus each time.
+  const handleTopicNameSubmit = async (topicName: string) => {
+    if (isSubmittingTopic) return;
 
     try {
       setIsSubmittingTopic(true);
-      const topicName = topicInput.trim();
       const topicFile = createMinimalPdfBlob(topicName);
-      setTopicInput("");
       await processFiles([topicFile]);
     } catch (err) {
       console.error("Failed to generate topic module:", err);
@@ -875,12 +944,12 @@ startxref
             <Home className="w-5 h-5" />
           </button>
           <button
-            onClick={() => handleTabChange("upload")}
-            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "upload" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
+            onClick={() => handleTabChange("tutor")}
+            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "tutor" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
               }`}
-            title="Upload Documents"
+            title="AI Tutor"
           >
-            <Upload className="w-5 h-5" />
+            <GraduationCap className="w-5 h-5" />
           </button>
           <button
             onClick={() => handleTabChange("learning")}
@@ -891,20 +960,20 @@ startxref
             <BookOpen className="w-5 h-5" />
           </button>
           <button
+            onClick={() => handleTabChange("upload")}
+            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "upload" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
+              }`}
+            title="Upload Documents"
+          >
+            <Upload className="w-5 h-5" />
+          </button>
+          <button
             onClick={() => handleTabChange("assessment")}
             className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "assessment" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
               }`}
             title="Assessment"
           >
             <FileText className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => handleTabChange("tutor")}
-            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "tutor" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
-              }`}
-            title="AI Tutor"
-          >
-            <GraduationCap className="w-5 h-5" />
           </button>
         </div>
 
@@ -972,37 +1041,7 @@ startxref
                 </div>
               </div>
 
-              <form onSubmit={handleTopicSubmit} className="mt-4 flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-indigo-400">
-                    <BookOpen className="w-5 h-5" />
-                  </div>
-                  <input
-                    type="text"
-                    value={topicInput}
-                    onChange={(e) => setTopicInput(e.target.value)}
-                    placeholder="e.g. Quantum Computing, Photosynthesis, Neural Networks..."
-                    className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={!topicInput.trim() || isSubmittingTopic}
-                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 whitespace-nowrap"
-                >
-                  {isSubmittingTopic ? (
-                    <>
-                      <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                      <span>Creating Module...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      <span>START LEARNING</span>
-                    </>
-                  )}
-                </button>
-              </form>
+              <TopicInputForm onSubmit={handleTopicNameSubmit} isSubmitting={isSubmittingTopic} />
             </div>
 
             {files.length > 0 && (
@@ -1094,9 +1133,9 @@ startxref
                 {files.some((f) => successMessages[f.name]) && (
                   <button
                     className="mt-6 w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
-                    onClick={() => handleTabChange("learning")}
+                    onClick={() => handleTabChange("tutor")}
                   >
-                    Continue to Learning
+                    Continue to AI Tutor
                   </button>
                 )}
               </div>
@@ -1613,12 +1652,12 @@ startxref
               <Home className="w-5 h-5" />
             </button>
             <button
-              onClick={() => handleTabChange("upload")}
-              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "upload" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
+              onClick={() => handleTabChange("tutor")}
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "tutor" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
                 }`}
-              title="Upload Documents"
+              title="AI Tutor"
             >
-              <Upload className="w-5 h-5" />
+              <GraduationCap className="w-5 h-5" />
             </button>
             <button
               onClick={() => handleTabChange("learning")}
@@ -1629,20 +1668,20 @@ startxref
               <BookOpen className="w-5 h-5" />
             </button>
             <button
+              onClick={() => handleTabChange("upload")}
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "upload" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
+                }`}
+              title="Upload Documents"
+            >
+              <Upload className="w-5 h-5" />
+            </button>
+            <button
               onClick={() => handleTabChange("assessment")}
               className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "assessment" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
                 }`}
               title="Assessment"
             >
               <FileText className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => handleTabChange("tutor")}
-              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "tutor" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
-                }`}
-              title="AI Tutor"
-            >
-              <GraduationCap className="w-5 h-5" />
             </button>
           </div>
 

@@ -133,11 +133,11 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
         <Home className="w-5 h-5" />
       </button>
       <button
-        onClick={() => handleTabChange("upload")}
-        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-        title="Upload Documents"
+        onClick={() => handleTabChange("tutor")}
+        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors bg-primary/10 text-primary"
+        title="AI Tutor"
       >
-        <Upload className="w-5 h-5" />
+        <GraduationCap className="w-5 h-5" />
       </button>
       <button
         onClick={() => handleTabChange("learning")}
@@ -147,18 +147,18 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
         <BookOpen className="w-5 h-5" />
       </button>
       <button
+        onClick={() => handleTabChange("upload")}
+        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
+        title="Upload Documents"
+      >
+        <Upload className="w-5 h-5" />
+      </button>
+      <button
         onClick={() => handleTabChange("assessment")}
         className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
         title="Assessment"
       >
         <FileText className="w-5 h-5" />
-      </button>
-      <button
-        onClick={() => handleTabChange("tutor")}
-        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors bg-primary/10 text-primary"
-        title="AI Tutor"
-      >
-        <GraduationCap className="w-5 h-5" />
       </button>
     </div>
   );
@@ -203,7 +203,7 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
           {!isSignedIn && (
             <p className="text-xs text-muted-foreground mt-2">
               Progress is saved to this device only.{" "}
-              <SignInButton mode="modal">
+              <SignInButton mode="modal" forceRedirectUrl="/study">
                 <button className="text-primary hover:underline">Sign in to sync it</button>
               </SignInButton>
             </p>
