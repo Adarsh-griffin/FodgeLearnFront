@@ -1,10 +1,26 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@clerk/react";
 import { AnimatedHeroOverlay } from "@/components/AnimatedHeroOverlay";
+import { AuthGateModal } from "@/components/AuthGateModal";
+import { hasAnonymousId } from "@/lib/identity";
 import { useEffect, useRef, useState } from "react";
 
 export function Home() {
   const [activeSection, setActiveSection] = useState(0);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [showAuthGate, setShowAuthGate] = useState(false);
+  const { isSignedIn } = useAuth();
+  const navigate = useNavigate();
+
+  // Already identified (signed in, or already chose guest before) - skip
+  // the popup entirely and go straight in.
+  const handleGetStarted = () => {
+    if (isSignedIn || hasAnonymousId()) {
+      navigate("/study");
+    } else {
+      setShowAuthGate(true);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -43,12 +59,12 @@ export function Home() {
             NeuroLearn provides a completely interactive and adaptive learning experience. We use AI to manage and customize your educational journey, ensuring that every piece of content, every quiz, and every challenge is perfectly matched to your current skill level and goals. This intelligent path transforms passive studying into active, successful, and enduring learning .
             </p>
             <div className="flex gap-4 flex-wrap">
-              <Link
-                to="/study"
+              <button
+                onClick={handleGetStarted}
                 className="px-8 py-3 bg-[hsl(var(--button-lavender))] text-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity"
               >
                 GET STARTED
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -294,14 +310,19 @@ export function Home() {
             Join our platform and begin your journey to mastering new skills and
             knowledge.
           </p>
-          <Link
-            to="/study"
+          <button
+            onClick={handleGetStarted}
             className="inline-block px-8 py-3 bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
           >
             Get Started
-          </Link>
+          </button>
         </div>
       </section>
+
+      <AuthGateModal
+        isOpen={showAuthGate}
+        onClose={() => setShowAuthGate(false)}
+      />
     </div>
   );
 }

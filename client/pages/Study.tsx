@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff } from "lucide-react";
+import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap } from "lucide-react";
+import { TutorTab } from "@/components/tutor/TutorTab";
 import { apiService, UploadResponse, ReferenceLink, ProcessingStatus, AssessmentQuestion, AssessmentFeedback } from "@/lib/api";
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
@@ -14,7 +15,7 @@ type AssessmentState = 'welcome' | 'question' | 'answer' | 'feedback';
 
 
 
-const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "upload" | "learning" | "assessment") => void, navigate: (path: string | number) => void }) => {
+const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "upload" | "learning" | "assessment" | "tutor") => void, navigate: (path: string | number) => void }) => {
   const [currentState, setCurrentState] = useState<AssessmentState>('welcome');
   const [question, setQuestion] = useState<string>('');
   const [userAnswer, setUserAnswer] = useState<string>('');
@@ -159,6 +160,13 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
             title="Assessment"
           >
             <FileText className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => handleTabChange("tutor")}
+            className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-gray-200 text-gray-600 hover:bg-gray-300"
+            title="AI Tutor"
+          >
+            <GraduationCap className="w-5 h-5" />
           </button>
         </div>
 
@@ -578,13 +586,69 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
 export function StudyPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"upload" | "learning" | "assessment">("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "learning" | "assessment" | "tutor">("upload");
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [processingStatus, setProcessingStatus] = useState<{ [key: string]: ProcessingStatus }>({});
   const [successMessages, setSuccessMessages] = useState<{ [key: string]: boolean }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Topic Learning State
+  const [topicInput, setTopicInput] = useState("");
+  const [isSubmittingTopic, setIsSubmittingTopic] = useState(false);
+
+  const createMinimalPdfBlob = (topicName: string): File => {
+    const safeTitle = topicName.replace(/[()\\]/g, '');
+    const content = `%PDF-1.4
+1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj
+2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj
+3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources <</Font <</F1 5 0 R>>>>>> endobj
+4 0 obj <</Length 140>> stream
+BT
+/F1 18 Tf
+50 700 Td
+(Topic: ${safeTitle}) Tj
+/F1 12 Tf
+0 -30 Td
+(Comprehensive AI Learning Module for ${safeTitle}) Tj
+ET
+endstream
+endobj
+5 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj
+xref
+0 6
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000115 00000 n
+0000000246 00000 n
+0000000436 00000 n
+trailer <</Size 6 /Root 1 0 R>>
+startxref
+515
+%%EOF`;
+    const blob = new Blob([content], { type: 'application/pdf' });
+    const fileName = `${topicName.toLowerCase().trim().replace(/[^a-z0-9]/g, '_')}_topic.pdf`;
+    return new File([blob], fileName, { type: 'application/pdf' });
+  };
+
+  const handleTopicSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!topicInput.trim() || isSubmittingTopic) return;
+
+    try {
+      setIsSubmittingTopic(true);
+      const topicName = topicInput.trim();
+      const topicFile = createMinimalPdfBlob(topicName);
+      setTopicInput("");
+      await processFiles([topicFile]);
+    } catch (err) {
+      console.error("Failed to generate topic module:", err);
+    } finally {
+      setIsSubmittingTopic(false);
+    }
+  };
 
   // Resize functionality
   const [sectionWidths, setSectionWidths] = useState([33.33, 33.33, 33.34]); // Video, AI Tutor, AI Summary
@@ -595,13 +659,13 @@ export function StudyPage() {
   // Handle URL parameters for tab selection
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['upload', 'learning', 'assessment'].includes(tab)) {
-      setActiveTab(tab as "upload" | "learning" | "assessment");
+    if (tab && ['upload', 'learning', 'assessment', 'tutor'].includes(tab)) {
+      setActiveTab(tab as "upload" | "learning" | "assessment" | "tutor");
     }
   }, [searchParams]);
 
   // Clear cache when switching to learning tab to ensure fresh data
-  const handleTabChange = (tab: "upload" | "learning" | "assessment") => {
+  const handleTabChange = (tab: "upload" | "learning" | "assessment" | "tutor") => {
     if (tab === "learning") {
       // Clear cache when switching to learning tab to get fresh data
       localStorage.removeItem('neurolearn_summary_text');
@@ -834,6 +898,14 @@ export function StudyPage() {
           >
             <FileText className="w-5 h-5" />
           </button>
+          <button
+            onClick={() => handleTabChange("tutor")}
+            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "tutor" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+              }`}
+            title="AI Tutor"
+          >
+            <GraduationCap className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="flex-1 p-8">
@@ -874,6 +946,63 @@ export function StudyPage() {
               >
                 SELECT FILES
               </button>
+            </div>
+
+            {/* Divider */}
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-4 text-muted-foreground font-semibold tracking-wider">
+                  OR LEARN BY TOPIC NAME
+                </span>
+              </div>
+            </div>
+
+            {/* Topic Input Box */}
+            <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 via-purple-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Don't have a PDF? Type a Topic Name</h3>
+                  <p className="text-xs text-gray-500">Instant AI learning module generation for any concept, subject, or question.</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleTopicSubmit} className="mt-4 flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-indigo-400">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <input
+                    type="text"
+                    value={topicInput}
+                    onChange={(e) => setTopicInput(e.target.value)}
+                    placeholder="e.g. Quantum Computing, Photosynthesis, Neural Networks..."
+                    className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={!topicInput.trim() || isSubmittingTopic}
+                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+                >
+                  {isSubmittingTopic ? (
+                    <>
+                      <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                      <span>Creating Module...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>START LEARNING</span>
+                    </>
+                  )}
+                </button>
+              </form>
             </div>
 
             {files.length > 0 && (
@@ -1169,7 +1298,12 @@ export function StudyPage() {
         try {
           const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/files`);
           if (response.ok) {
-            const fileList = await response.json();
+            // /api/files now returns {_id, originalName, uploadDate, size, folder}[]
+            // instead of a bare string[] (so the AI Tutor tab has a stable
+            // fileId to key off) - reduce to filenames here since that's all
+            // this dropdown/cache has ever used.
+            const fileObjects: { originalName: string }[] = await response.json();
+            const fileList = fileObjects.map((f) => f.originalName).filter(Boolean);
             setAvailableFiles(fileList);
             // Set the first file (most recent) as default
             if (fileList.length > 0 && !selectedFile) {
@@ -1501,6 +1635,14 @@ export function StudyPage() {
               title="Assessment"
             >
               <FileText className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => handleTabChange("tutor")}
+              className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "tutor" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                }`}
+              title="AI Tutor"
+            >
+              <GraduationCap className="w-5 h-5" />
             </button>
           </div>
 
@@ -1901,7 +2043,9 @@ export function StudyPage() {
 
                               const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/files`);
                               if (response.ok) {
-                                const fileList = await response.json();
+                                // See loadAvailableFiles above - /api/files now returns objects.
+                                const fileObjects: { originalName: string }[] = await response.json();
+                                const fileList = fileObjects.map((f) => f.originalName).filter(Boolean);
                                 setAvailableFiles(fileList);
                                 // Update selected file if current one is no longer available
                                 if (fileList.length > 0 && !fileList.includes(selectedFile)) {
@@ -2063,7 +2207,8 @@ export function StudyPage() {
         <h1 className="text-lg font-semibold text-gray-800">
           {activeTab === "upload" ? "Upload Documents" :
             activeTab === "learning" ? "Learning Hub" :
-              "Assessment"}
+              activeTab === "assessment" ? "Assessment" :
+                "AI Tutor"}
         </h1>
 
         {/* Backend Connection Status */}
@@ -2093,6 +2238,7 @@ export function StudyPage() {
         {activeTab === "upload" && <UploadTab />}
         {activeTab === "learning" && <LearningTab files={files} />}
         {activeTab === "assessment" && <AssessmentTab handleTabChange={handleTabChange} navigate={navigate} />}
+        {activeTab === "tutor" && <TutorTab />}
       </div>
     </div>
   );

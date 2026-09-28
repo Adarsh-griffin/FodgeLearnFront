@@ -19,9 +19,10 @@ export interface ProcessingStatus {
 
 export interface FileInfo {
   _id: string;
-  filename: string;
+  originalName: string;
   uploadDate: string;
   size: number;
+  folder?: string;
 }
 
 export interface QAResponse {
