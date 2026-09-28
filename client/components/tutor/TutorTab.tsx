@@ -1,88 +1,278 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth, SignInButton } from "@clerk/react";
-import { GraduationCap } from "lucide-react";
+import { FileText, GraduationCap, CheckCircle2, Home, Upload, BookOpen } from "lucide-react";
+import { apiService, FileInfo, StudyPlan, DiagnosticResult } from "@/lib/api";
 import { getTutorAuthHeaders } from "@/lib/identity";
+import { OnboardingStep } from "./OnboardingStep";
+import { DiagnosticQuiz } from "./DiagnosticQuiz";
+import { RoadmapView } from "./RoadmapView";
+import { LessonView } from "./LessonView";
+
+type Stage = "loading" | "select_file" | "onboarding" | "diagnostic" | "generating_plan" | "roadmap" | "lesson" | "complete";
+
+const FILE_ID_KEY = "neurolearn_tutor_file_id";
+const FILE_NAME_KEY = "neurolearn_tutor_file_name";
 
 /**
- * Phase 0 placeholder for the AI Tutor feature.
+ * Orchestrates the full AI Tutor flow: pick a document -> onboarding
+ * (goal + time) -> adaptive diagnostic (Phase 2) -> generated roadmap
+ * (Phase 3) -> lesson-by-lesson delivery (Phase 4) -> completion.
  *
- * Identity here is never blocking: a student reaches this tab either
- * Clerk-signed-in or anonymous (they chose "Continue without an account" on
- * the AuthGateModal on the home page, or landed here directly - either way
- * getTutorAuthHeaders() falls back to an anonymous id automatically). This
- * only proves that wiring end-to-end via `/api/tutor/ping`.
- *
- * The real diagnostic quiz / roadmap / lesson UI (DiagnosticQuiz.tsx,
- * RoadmapView.tsx, LessonView.tsx) replaces the content below in later
- * build phases - this file is the permanent home for that, not a
- * throwaway.
+ * Identity is never blocking here: a student reaches every stage whether
+ * signed in or anonymous (see client/lib/identity.ts) - getAuthHeaders()
+ * always resolves a fresh token/id right before each API call rather than
+ * a precomputed one, since a Clerk session token is short-lived and a
+ * full diagnostic + lesson run can span several minutes.
  */
-export function TutorTab() {
+interface TutorTabProps {
+  handleTabChange: (tab: "upload" | "learning" | "assessment" | "tutor") => void;
+  navigate: (path: string | number) => void;
+}
+
+export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
   const { isLoaded, isSignedIn, getToken } = useAuth();
-  const [pingResult, setPingResult] = useState<string | null>(null);
-  const [pingError, setPingError] = useState<string | null>(null);
-  const [isPinging, setIsPinging] = useState(false);
+  const [stage, setStage] = useState<Stage>("loading");
+  const [files, setFiles] = useState<FileInfo[]>([]);
+  const [filesError, setFilesError] = useState<string | null>(null);
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [goal, setGoal] = useState<string>("Understand the topic deeply");
+  const [availableMinutes, setAvailableMinutes] = useState<number>(30);
+  const [plan, setPlan] = useState<StudyPlan | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
 
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+  const getAuthHeaders = useCallback(
+    () => getTutorAuthHeaders(!!isSignedIn, getToken),
+    [isSignedIn, getToken],
+  );
 
-  const handlePing = async () => {
-    setIsPinging(true);
-    setPingError(null);
-    setPingResult(null);
+  // Load the file list once Clerk has resolved sign-in state, and restore
+  // a previously-selected document (if any) so a page refresh doesn't
+  // dump the student back to square one.
+  useEffect(() => {
+    if (!isLoaded) return;
+    let cancelled = false;
+    apiService
+      .getFiles()
+      .then((list) => {
+        if (cancelled) return;
+        setFiles(list);
+        const cachedId = localStorage.getItem(FILE_ID_KEY);
+        const cachedName = localStorage.getItem(FILE_NAME_KEY);
+        const stillExists = cachedId && list.some((f) => f._id === cachedId);
+        if (stillExists) {
+          setSelectedFileId(cachedId);
+          setSelectedFileName(cachedName);
+          setStage("onboarding");
+        } else {
+          setStage("select_file");
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setFilesError(err instanceof Error ? err.message : "Failed to load your documents");
+          setStage("select_file");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded]);
+
+  const handleSelectFile = (file: FileInfo) => {
+    localStorage.setItem(FILE_ID_KEY, file._id);
+    localStorage.setItem(FILE_NAME_KEY, file.originalName);
+    setSelectedFileId(file._id);
+    setSelectedFileName(file.originalName);
+    setStage("onboarding");
+  };
+
+  const handleChangeDocument = () => {
+    localStorage.removeItem(FILE_ID_KEY);
+    localStorage.removeItem(FILE_NAME_KEY);
+    setSelectedFileId(null);
+    setSelectedFileName(null);
+    setPlan(null);
+    setStage("select_file");
+  };
+
+  const handleOnboardingComplete = (chosenGoal: string, minutes: number) => {
+    setGoal(chosenGoal);
+    setAvailableMinutes(minutes);
+    setStage("diagnostic");
+  };
+
+  const handleDiagnosticComplete = async (_result: DiagnosticResult) => {
+    if (!selectedFileId) return;
+    setStage("generating_plan");
+    setPlanError(null);
     try {
-      const headers = await getTutorAuthHeaders(!!isSignedIn, getToken);
-      const res = await fetch(`${baseUrl}/api/tutor/ping`, { headers });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Request failed");
-      setPingResult(`Backend confirmed user: ${data.user_id}`);
+      const headers = await getAuthHeaders();
+      const generatedPlan = await apiService.generateStudyPlan(selectedFileId, availableMinutes, goal, headers);
+      setPlan(generatedPlan);
+      setStage("roadmap");
     } catch (err) {
-      setPingError(err instanceof Error ? err.message : "Ping failed");
-    } finally {
-      setIsPinging(false);
+      setPlanError(err instanceof Error ? err.message : "Failed to generate your study plan");
+      setStage("roadmap");
     }
   };
 
-  if (!isLoaded) {
+  const handleStartLearning = () => setStage("lesson");
+  const handleAllDone = () => setStage("complete");
+
+  // Same rail every other tab renders (Upload/Learning/Assessment each keep
+  // their own copy) - the AI Tutor tab needs it too, so a student can get
+  // back to another tab without hitting the browser back button.
+  const rail = (
+    <div className="w-16 sm:w-20 bg-secondary flex flex-col items-center py-4 gap-3 flex-shrink-0">
+      <button
+        onClick={() => navigate("/")}
+        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
+        title="Home"
+      >
+        <Home className="w-5 h-5" />
+      </button>
+      <button
+        onClick={() => handleTabChange("upload")}
+        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
+        title="Upload Documents"
+      >
+        <Upload className="w-5 h-5" />
+      </button>
+      <button
+        onClick={() => handleTabChange("learning")}
+        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
+        title="Learning Hub"
+      >
+        <BookOpen className="w-5 h-5" />
+      </button>
+      <button
+        onClick={() => handleTabChange("assessment")}
+        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
+        title="Assessment"
+      >
+        <FileText className="w-5 h-5" />
+      </button>
+      <button
+        onClick={() => handleTabChange("tutor")}
+        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors bg-primary/10 text-primary"
+        title="AI Tutor"
+      >
+        <GraduationCap className="w-5 h-5" />
+      </button>
+    </div>
+  );
+
+  if (stage === "loading" || !isLoaded) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-500">
-        Loading...
+      <div className="flex-1 flex min-h-0">
+        {rail}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
-      <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center">
-        <GraduationCap className="w-8 h-8 text-indigo-600" />
-      </div>
-      <h2 className="text-xl font-semibold text-gray-800">
-        AI Tutor — coming online
-      </h2>
-      <p className="text-sm text-gray-500 max-w-sm">
-        Diagnostic quiz, personalized roadmap, and adaptive lessons land here
-        in the next build phases.
-      </p>
-
-      {!isSignedIn && (
-        <div className="flex items-center gap-2 text-xs text-gray-400">
-          <span>Progress on this device only.</span>
-          <SignInButton mode="modal">
-            <button className="text-indigo-600 hover:underline">
-              Sign in to sync it
-            </button>
-          </SignInButton>
+  if (stage === "select_file") {
+    return (
+      <div className="flex-1 flex min-h-0">
+        {rail}
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-4 sm:p-8 text-center overflow-y-auto">
+          <div className="w-16 h-16 gradient-brand rounded-full flex items-center justify-center">
+            <GraduationCap className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-lg sm:text-xl font-bold text-foreground">Which document do you want to learn?</h2>
+          {filesError && <p className="text-sm text-destructive">{filesError}</p>}
+          {files.length === 0 && !filesError ? (
+            <p className="text-sm text-muted-foreground">Upload a document first from the Upload tab.</p>
+          ) : (
+            <div className="w-full max-w-md space-y-2">
+              {files.map((f) => (
+                <button
+                  key={f._id}
+                  onClick={() => handleSelectFile(f)}
+                  className="w-full flex items-center gap-3 p-3 bg-card rounded-lg border border-border hover:border-primary/40 hover:bg-secondary transition-colors text-left"
+                >
+                  <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-sm text-foreground truncate">{f.originalName}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {!isSignedIn && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Progress is saved to this device only.{" "}
+              <SignInButton mode="modal">
+                <button className="text-primary hover:underline">Sign in to sync it</button>
+              </SignInButton>
+            </p>
+          )}
         </div>
-      )}
+      </div>
+    );
+  }
 
-      <button
-        onClick={handlePing}
-        disabled={isPinging}
-        className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
-      >
-        {isPinging ? "Checking..." : "Test authenticated connection"}
-      </button>
-      {pingResult && <p className="text-sm text-green-600">{pingResult}</p>}
-      {pingError && <p className="text-sm text-red-600">{pingError}</p>}
+  if (!selectedFileId) return null; // unreachable past this point, but keeps TS happy
+
+  return (
+    <div className="flex-1 flex min-h-0">
+      {rail}
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border flex-shrink-0 gap-2">
+          <span className="text-sm text-muted-foreground truncate">{selectedFileName}</span>
+          <button onClick={handleChangeDocument} className="text-xs text-primary hover:underline flex-shrink-0">
+            Change document
+          </button>
+        </div>
+
+        {stage === "onboarding" && <OnboardingStep onComplete={handleOnboardingComplete} />}
+
+        {stage === "diagnostic" && (
+          <DiagnosticQuiz
+            fileId={selectedFileId}
+            goal={goal}
+            getAuthHeaders={getAuthHeaders}
+            onComplete={handleDiagnosticComplete}
+          />
+        )}
+
+        {stage === "generating_plan" && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-muted-foreground">Building your personalized learning path...</p>
+          </div>
+        )}
+
+        {stage === "roadmap" && plan && <RoadmapView plan={plan} onStart={handleStartLearning} />}
+        {stage === "roadmap" && !plan && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
+            <p className="text-destructive">{planError}</p>
+          </div>
+        )}
+
+        {stage === "lesson" && (
+          <LessonView fileId={selectedFileId} getAuthHeaders={getAuthHeaders} onAllDone={handleAllDone} />
+        )}
+
+        {stage === "complete" && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-4 sm:p-8 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold text-foreground">Session complete!</h2>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              You've worked through every topic in this plan. Come back any time to review or build a new plan.
+            </p>
+            <button
+              onClick={() => setStage("onboarding")}
+              className="px-6 py-3 gradient-brand text-white rounded-xl font-semibold shadow-premium hover:opacity-95 active:scale-[0.98] transition-all"
+            >
+              Start a New Session
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -28,38 +28,35 @@ export function AuthGateModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm px-4"
       onClick={onClose}
     >
       <div
-        className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center relative"
+        className="max-w-md w-full bg-card rounded-2xl shadow-premium p-6 sm:p-8 text-center relative"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <GraduationCap className="w-8 h-8 text-indigo-600" />
+        <div className="w-16 h-16 gradient-brand rounded-full flex items-center justify-center mx-auto mb-6">
+          <GraduationCap className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-2xl font-semibold text-gray-800 mb-3">
-          Welcome to NeuroLearn
-        </h1>
-        <p className="text-sm text-gray-500 mb-8">
-          Sign in so your AI Tutor remembers what you know across visits and
-          devices - or continue as a guest and keep everything on this
-          device only.
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-3">Welcome to LearnFodge</h1>
+        <p className="text-sm text-muted-foreground mb-8">
+          Sign in so your AI Tutor remembers what you know across visits and devices - or continue as a guest and
+          keep everything on this device only.
         </p>
 
         <div className="flex flex-col gap-3">
           <SignInButton mode="modal" forceRedirectUrl="/study">
             <button
               onClick={onClose}
-              className="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+              className="w-full px-6 py-3 gradient-brand text-white rounded-xl font-semibold hover:opacity-95 active:scale-[0.98] transition-all"
             >
               Sign In
             </button>
@@ -67,14 +64,14 @@ export function AuthGateModal({
           <SignUpButton mode="modal" forceRedirectUrl="/study">
             <button
               onClick={onClose}
-              className="w-full px-6 py-3 bg-indigo-50 text-indigo-700 rounded-lg font-medium hover:bg-indigo-100 transition-colors"
+              className="w-full px-6 py-3 bg-secondary text-secondary-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-colors"
             >
               Create Account
             </button>
           </SignUpButton>
           <button
             onClick={handleGuest}
-            className="w-full px-6 py-3 text-gray-500 rounded-lg font-medium hover:bg-gray-100 transition-colors text-sm"
+            className="w-full px-6 py-3 text-muted-foreground rounded-xl font-medium hover:bg-muted transition-colors text-sm"
           >
             Continue as Guest
           </button>

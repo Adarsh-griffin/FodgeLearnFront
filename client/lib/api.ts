@@ -68,6 +68,145 @@ export interface ReferenceLink {
   description?: string;
 }
 
+// ---------------- AI Tutor types (see LearnBack's tutor build plan) ----------------
+// Every /api/tutor/* call needs an auth header - either a Clerk Bearer
+// token or an X-Anonymous-Id (see client/lib/identity.ts's
+// getTutorAuthHeaders, which every caller below is expected to pass in).
+
+export interface TutorTopic {
+  id: string;
+  title: string;
+  page_range: [number | null, number | null];
+  summary: string;
+  prerequisites: string[];
+}
+
+export interface TutorTopicGraph {
+  topics: TutorTopic[];
+  generated_at: string;
+}
+
+export interface DiagnosticOption {
+  key: string;
+  text: string;
+}
+
+/** One question to answer - always has done:false. */
+export interface DiagnosticQuestion {
+  done: false;
+  topic_id: string;
+  topic_title: string;
+  question: string;
+  options: DiagnosticOption[];
+  questions_asked: number;
+  max_questions: number;
+  // Feedback on the PREVIOUS answer - absent on the very first question from /start.
+  correct?: boolean;
+  correct_key?: string;
+  misconception?: string | null;
+  answered_topic_id?: string;
+  answered_topic_title?: string;
+}
+
+/** The diagnostic has finished - always has done:true. */
+export interface DiagnosticResult {
+  done: true;
+  mastery: Record<string, number>;
+  weak_prerequisites: string[];
+  confidence: number;
+  questions_asked: number;
+  notice?: string;
+  correct?: boolean;
+  correct_key?: string;
+  misconception?: string | null;
+  answered_topic_id?: string;
+  answered_topic_title?: string;
+}
+
+export type DiagnosticStepResponse = DiagnosticQuestion | DiagnosticResult;
+
+// This project builds with strictNullChecks: false, which weakens
+// TypeScript's automatic discriminated-union narrowing on `if (res.done)` -
+// explicit type-predicate functions narrow correctly regardless of that
+// setting, so callers use these instead of relying on `res.done` alone.
+export function isDiagnosticDone(res: DiagnosticStepResponse): res is DiagnosticResult {
+  return res.done === true;
+}
+
+export type MasteryBand = 'teach' | 'practice' | 'apply' | 'review';
+export type DeliveryMode = 'worked_example' | 'socratic' | 'direct_explanation' | 'review';
+
+export interface StudyPlanStep {
+  topic_id: string;
+  title: string;
+  mastery: number;
+  band: MasteryBand;
+  estimated_minutes: number;
+  delivery_mode: DeliveryMode;
+  reason: string;
+  prerequisites: string[];
+}
+
+export interface DeferredTopic {
+  topic_id: string;
+  title: string;
+  band: MasteryBand;
+}
+
+export interface StudyPlan {
+  goal: string;
+  available_minutes: number;
+  total_minutes: number;
+  steps: StudyPlanStep[];
+  deferred_topics: DeferredTopic[];
+  generated_at: string;
+}
+
+/** One lesson to work through - always has done:false. */
+export interface LessonStep {
+  done: false;
+  topic_id: string;
+  topic_title: string;
+  is_remediation: boolean;
+  delivery_mode: DeliveryMode;
+  mastery: number;
+  band: MasteryBand;
+  objective: string;
+  explanation: string;
+  example: string;
+  checkpoint_question: string;
+  step_index: number;
+  total_steps: number;
+}
+
+/** No more planned topics left - always has done:true. */
+export interface LessonComplete {
+  done: true;
+  message: string;
+}
+
+export type LessonNextResponse = LessonStep | LessonComplete;
+
+export function isLessonComplete(res: LessonNextResponse): res is LessonComplete {
+  return res.done === true;
+}
+
+export type NextAction = 'advance' | 'reteach_different_strategy' | 'remediate_prerequisite' | 'advance_forced';
+
+export interface CheckpointResult {
+  understood: boolean;
+  feedback: string;
+  misconception: string | null;
+  topic_id: string;
+  topic_title: string;
+  mastery: number;
+  next_action: NextAction;
+  reason: string;
+  done: boolean;
+  step_index: number;
+  total_steps: number;
+}
+
 class ApiService {
   private baseURL: string;
 
@@ -359,6 +498,91 @@ class ApiService {
       throw new Error(errorData.error || 'Failed to check processing status');
     }
 
+    return response.json();
+  }
+
+  // ---------------- AI Tutor ----------------
+  // Every method below takes `authHeaders` last - build it once per call
+  // site with getTutorAuthHeaders() from client/lib/identity.ts.
+
+  async getTutorTopics(fileId: string, authHeaders: Record<string, string>): Promise<TutorTopicGraph> {
+    const response = await fetch(`${this.baseURL}/api/tutor/topics?fileId=${encodeURIComponent(fileId)}`, {
+      headers: authHeaders,
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to fetch topics');
+    }
+    return response.json();
+  }
+
+  async startDiagnostic(fileId: string, goal: string, authHeaders: Record<string, string>): Promise<DiagnosticStepResponse> {
+    const response = await fetch(`${this.baseURL}/api/tutor/diagnostic/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ fileId, goal }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to start the diagnostic');
+    }
+    return response.json();
+  }
+
+  async answerDiagnostic(fileId: string, selectedKey: string, authHeaders: Record<string, string>): Promise<DiagnosticStepResponse> {
+    const response = await fetch(`${this.baseURL}/api/tutor/diagnostic/answer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ fileId, selectedKey }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to submit the answer');
+    }
+    return response.json();
+  }
+
+  async generateStudyPlan(
+    fileId: string,
+    availableMinutes: number,
+    goal: string | undefined,
+    authHeaders: Record<string, string>,
+  ): Promise<StudyPlan> {
+    const response = await fetch(`${this.baseURL}/api/tutor/plan/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ fileId, availableMinutes, goal }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to generate the study plan');
+    }
+    return response.json();
+  }
+
+  async getNextLesson(fileId: string, authHeaders: Record<string, string>): Promise<LessonNextResponse> {
+    const response = await fetch(`${this.baseURL}/api/tutor/lesson/next`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ fileId }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to load the next lesson');
+    }
+    return response.json();
+  }
+
+  async submitCheckpoint(fileId: string, answer: string, authHeaders: Record<string, string>): Promise<CheckpointResult> {
+    const response = await fetch(`${this.baseURL}/api/tutor/lesson/checkpoint`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ fileId, answer }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to submit the checkpoint answer');
+    }
     return response.json();
   }
 

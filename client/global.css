@@ -13,53 +13,77 @@
    * A different format will require also updating the theme in tailwind.config.ts.
   */
   :root {
+    /* LearnFodge official brand palette, converted from the supplied hex
+       swatches to HSL:
+         #0B1B3D navy   -> 221 69% 14%
+         #4B6BFF blue   -> 229 100% 65%  (primary)
+         #8A5CFF purple -> 257 100% 68%  (accent)
+         #FF8A5B orange -> 17 100% 68%   (--gold, kept under its old var
+                                           name so existing bg-gold/text-gold
+                                           usages just pick up the real
+                                           brand color)
+         #FFECC7 cream  -> 40 100% 89%
+       Cream is nearly white - reserved for surfaces that carry DARK text
+       (badges, soft highlight backgrounds), never as a background behind
+       white text or as a text-gradient endpoint, where it would vanish. */
     --background: 0 0% 100%;
-    --foreground: 0 0% 20%;
+    --foreground: 222 35% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 20%;
+    --card-foreground: 222 35% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 20%;
+    --popover-foreground: 222 35% 14%;
 
-    --primary: 3 75% 57%;
+    --primary: 229 100% 65%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 46% 65%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 229 60% 96%;
+    --secondary-foreground: 229 45% 24%;
 
-    --muted: 0 0% 95%;
-    --muted-foreground: 0 0% 50%;
+    --muted: 229 20% 96%;
+    --muted-foreground: 222 12% 46%;
 
-    --accent: 39 100% 62%;
-    --accent-foreground: 0 0% 20%;
+    --accent: 257 100% 68%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 95%;
-    --ring: 3 75% 57%;
+    --border: 229 20% 90%;
+    --input: 229 20% 95%;
+    --ring: 229 100% 65%;
 
-    --radius: 0.75rem;
+    --radius: 0.875rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 221 69% 14%;
 
-    --sidebar-foreground: 0 0% 20%;
+    --sidebar-foreground: 229 30% 92%;
 
-    --sidebar-primary: 3 75% 57%;
+    --sidebar-primary: 229 100% 65%;
 
     --sidebar-primary-foreground: 0 0% 100%;
 
-    --sidebar-accent: 220 46% 65%;
+    --sidebar-accent: 17 100% 68%;
 
-    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-accent-foreground: 20 60% 15%;
 
-    --sidebar-border: 0 0% 90%;
+    --sidebar-border: 221 45% 24%;
 
-    --sidebar-ring: 3 75% 57%;
+    --sidebar-ring: 229 100% 65%;
 
-    --button-lavender: 250 76% 75%;
+    /* Brand orange - premium highlights (badges, remediation banners) */
+    --gold: 17 100% 68%;
+    --gold-foreground: 20 60% 15%;
+
+    /* Brand navy and cream, for surfaces that want the exact swatch rather
+       than a semantic slot above (a dark hero panel, a light warm badge). */
+    --navy: 221 69% 14%;
+    --navy-foreground: 229 30% 92%;
+    --cream: 40 100% 89%;
+    --cream-foreground: 25 50% 20%;
+
+    --button-lavender: 229 100% 65%;
   }
 
   .dark {
@@ -672,6 +696,37 @@
 /* V. Background/Static Elements */
 .animate-backpack-subtle-sway {
   animation: backpack-subtle-sway 3s ease-in-out infinite;
+}
+
+/* Premium surface treatments - reused across marketing + tutor UI */
+.shadow-premium {
+  box-shadow:
+    0 1px 2px rgba(16, 24, 64, 0.04),
+    0 8px 24px -4px rgba(67, 56, 202, 0.12),
+    0 2px 8px -2px rgba(67, 56, 202, 0.08);
+}
+
+/* Blue -> purple: the 2-stop slice used for buttons, badges and text
+   gradients, where the surface needs to stay legible/contrasty end to end. */
+.gradient-brand {
+  background: linear-gradient(135deg, hsl(229 100% 65%), hsl(257 100% 68%));
+}
+
+.gradient-gold {
+  background: linear-gradient(135deg, hsl(17 100% 68%), hsl(32 95% 60%));
+}
+
+/* The full brand spectrum (navy -> blue -> purple -> orange), for large
+   section backgrounds only - stops before the pale cream swatch on
+   purpose, since white text over #FFECC7 has no contrast. */
+.gradient-spectrum {
+  background: linear-gradient(
+    120deg,
+    hsl(221 69% 14%) 0%,
+    hsl(229 100% 65%) 35%,
+    hsl(257 100% 68%) 65%,
+    hsl(17 100% 68%) 100%
+  );
 }
 
 /* Hide scrollbars while maintaining scroll functionality */

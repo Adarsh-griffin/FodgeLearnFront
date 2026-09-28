@@ -2,46 +2,22 @@ import { Link } from "react-router-dom";
 
 export function Navigation() {
   return (
-    <div className="sticky top-0 z-50 bg-gradient-to-r ">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-        <div className="bg-white rounded-full px-6 py-2 bg-gradient-to-r from-purple-50 to-blue-100 shadow-lg">
+    <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <div className="bg-card rounded-full px-4 sm:px-6 py-2 shadow-premium border border-border">
           <div className="flex justify-between items-center">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-3">
-              <img src="/favicon.ico" alt="NeuroLearn" className="w-6 h-6 rounded-md" />
-              <span className="text-lg font-black tracking-wider text-gray-800" style={{fontFamily: 'Arial Black, sans-serif'}}>
-                NEUROLEARN
-              </span>
+            <Link to="/" className="flex items-center">
+              <img src="/navbarlogo.png" alt="LearnFodge" className="h-6 sm:h-7 w-auto" />
             </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-6">
-              <Link
-                to="/study"
-                className="px-5 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-semibold hover:opacity-90 transition-opacity shadow-md"
-              >
-                Start Now
-              </Link>
-            </div>
-
-            {/* Mobile Menu Button */}
-            <div className="md:hidden">
-              <button className="text-gray-600 hover:text-gray-800 transition-colors">
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-              </button>
-            </div>
+            {/* Always visible - there's only one nav action, so no hamburger needed */}
+            <Link
+              to="/study"
+              className="px-4 sm:px-5 py-2 gradient-brand text-white rounded-full text-sm sm:text-base font-semibold hover:opacity-90 active:scale-[0.98] transition-all shadow-sm"
+            >
+              Start Now
+            </Link>
           </div>
         </div>
       </div>

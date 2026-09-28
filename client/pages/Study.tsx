@@ -139,31 +139,31 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
     <div className="h-full w-full flex flex-col min-h-0">
       <div className="flex-1 flex min-h-0">
         {/* Left Sidebar */}
-        <div className="w-20 bg-gray-100 flex flex-col items-center py-4 gap-3">
+        <div className="w-16 sm:w-20 bg-secondary flex flex-col items-center py-4 gap-3">
           <button
             onClick={() => handleTabChange("upload")}
-            className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-gray-200 text-gray-600 hover:bg-gray-300"
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
             title="Upload Documents"
           >
             <Upload className="w-5 h-5" />
           </button>
           <button
             onClick={() => handleTabChange("learning")}
-            className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-gray-200 text-gray-600 hover:bg-gray-300"
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
             title="Learning Hub"
           >
             <BookOpen className="w-5 h-5" />
           </button>
           <button
             onClick={() => handleTabChange("assessment")}
-            className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-indigo-100 text-indigo-600"
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors bg-primary/10 text-primary"
             title="Assessment"
           >
             <FileText className="w-5 h-5" />
           </button>
           <button
             onClick={() => handleTabChange("tutor")}
-            className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-gray-200 text-gray-600 hover:bg-gray-300"
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
             title="AI Tutor"
           >
             <GraduationCap className="w-5 h-5" />
@@ -866,17 +866,17 @@ startxref
   const UploadTab = () => (
     <div className="h-full w-full flex flex-col">
       <div className="flex-1 flex">
-        <div className="w-20 bg-gray-100 flex flex-col items-center py-4 gap-3">
+        <div className="w-16 sm:w-20 bg-secondary flex flex-col items-center py-4 gap-3">
           <button
             onClick={() => navigate("/")}
-            className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-gray-200 text-gray-600 hover:bg-gray-300"
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
             title="Home"
           >
             <Home className="w-5 h-5" />
           </button>
           <button
             onClick={() => handleTabChange("upload")}
-            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "upload" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "upload" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
               }`}
             title="Upload Documents"
           >
@@ -884,7 +884,7 @@ startxref
           </button>
           <button
             onClick={() => handleTabChange("learning")}
-            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "learning" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "learning" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
               }`}
             title="Learning Hub"
           >
@@ -892,7 +892,7 @@ startxref
           </button>
           <button
             onClick={() => handleTabChange("assessment")}
-            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "assessment" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "assessment" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
               }`}
             title="Assessment"
           >
@@ -900,7 +900,7 @@ startxref
           </button>
           <button
             onClick={() => handleTabChange("tutor")}
-            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "tutor" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "tutor" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
               }`}
             title="AI Tutor"
           >
@@ -1604,17 +1604,17 @@ startxref
     return (
       <div className="h-full w-full flex flex-col min-h-0">
         <div className="flex-1 flex min-h-0">
-          <div className="w-20 bg-gray-100 flex flex-col items-center py-4 gap-3">
+          <div className="w-16 sm:w-20 bg-secondary flex flex-col items-center py-4 gap-3">
             <button
               onClick={() => navigate("/")}
-              className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-gray-200 text-gray-600 hover:bg-gray-300"
+              className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
               title="Home"
             >
               <Home className="w-5 h-5" />
             </button>
             <button
               onClick={() => handleTabChange("upload")}
-              className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "upload" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "upload" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
                 }`}
               title="Upload Documents"
             >
@@ -1622,7 +1622,7 @@ startxref
             </button>
             <button
               onClick={() => handleTabChange("learning")}
-              className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "learning" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "learning" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
                 }`}
               title="Learning Hub"
             >
@@ -1630,7 +1630,7 @@ startxref
             </button>
             <button
               onClick={() => handleTabChange("assessment")}
-              className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "assessment" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "assessment" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
                 }`}
               title="Assessment"
             >
@@ -1638,7 +1638,7 @@ startxref
             </button>
             <button
               onClick={() => handleTabChange("tutor")}
-              className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeTab === "tutor" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "tutor" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
                 }`}
               title="AI Tutor"
             >
@@ -2192,19 +2192,19 @@ startxref
 
 
   return (
-    <div className={`h-screen w-screen bg-white flex flex-col overflow-hidden min-h-0 ${isResizing ? 'cursor-col-resize' : ''}`}>
-      <div className="flex items-center gap-4 py-4 px-6 bg-white border-b border-gray-200 flex-shrink-0">
+    <div className={`h-screen w-screen bg-background flex flex-col overflow-hidden min-h-0 ${isResizing ? 'cursor-col-resize' : ''}`}>
+      <div className="flex items-center gap-2 sm:gap-4 py-3 sm:py-4 px-3 sm:px-6 bg-card border-b border-border flex-shrink-0">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          <span className="text-sm font-medium">Back</span>
+          <span className="text-sm font-medium hidden sm:inline">Back</span>
         </button>
-        <div className="h-4 w-px bg-gray-300"></div>
-        <h1 className="text-lg font-semibold text-gray-800">
+        <div className="h-4 w-px bg-border"></div>
+        <h1 className="text-base sm:text-lg font-bold text-foreground truncate">
           {activeTab === "upload" ? "Upload Documents" :
             activeTab === "learning" ? "Learning Hub" :
               activeTab === "assessment" ? "Assessment" :
@@ -2214,21 +2214,21 @@ startxref
         {/* Backend Connection Status */}
         <div className="flex items-center gap-2 ml-auto">
           {backendConnected === null && (
-            <div className="flex items-center gap-2 text-gray-500">
+            <div className="flex items-center gap-2 text-muted-foreground">
               <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-              <span className="text-xs">Connecting...</span>
+              <span className="text-xs hidden sm:inline">Connecting...</span>
             </div>
           )}
           {backendConnected === true && (
             <div className="flex items-center gap-2 text-green-600">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-xs">Connected</span>
+              <span className="text-xs hidden sm:inline">Connected</span>
             </div>
           )}
           {backendConnected === false && (
-            <div className="flex items-center gap-2 text-red-600">
+            <div className="flex items-center gap-2 text-destructive">
               <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              <span className="text-xs">Disconnected</span>
+              <span className="text-xs hidden sm:inline">Disconnected</span>
             </div>
           )}
         </div>
@@ -2238,7 +2238,7 @@ startxref
         {activeTab === "upload" && <UploadTab />}
         {activeTab === "learning" && <LearningTab files={files} />}
         {activeTab === "assessment" && <AssessmentTab handleTabChange={handleTabChange} navigate={navigate} />}
-        {activeTab === "tutor" && <TutorTab />}
+        {activeTab === "tutor" && <TutorTab handleTabChange={handleTabChange} navigate={navigate} />}
       </div>
     </div>
   );
