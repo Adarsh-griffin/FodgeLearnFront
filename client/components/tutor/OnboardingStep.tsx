@@ -17,7 +17,7 @@ export function OnboardingStep({ onComplete }: { onComplete: (goal: string, minu
   const canContinue = !!goal && !!minutes;
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4 sm:p-8 overflow-y-auto">
+    <div className="flex-1 flex items-center justify-center p-4 sm:p-8 pb-32 sm:pb-12 overflow-y-auto hide-scrollbar">
       <div className="max-w-lg w-full">
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">

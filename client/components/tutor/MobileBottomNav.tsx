@@ -1,0 +1,90 @@
+import { Home, BookOpen, Sparkles, FileText, ClipboardCheck } from "lucide-react";
+
+interface MobileBottomNavProps {
+  activeTab: "upload" | "learning" | "assessment" | "tutor" | "home";
+  handleTabChange: (tab: "upload" | "learning" | "assessment" | "tutor") => void;
+  navigate: (path: string | number) => void;
+  onOpenTutorSheet: () => void;
+}
+
+export function MobileBottomNav({
+  activeTab,
+  handleTabChange,
+  navigate,
+  onOpenTutorSheet,
+}: MobileBottomNavProps) {
+  return (
+    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 py-1.5 px-3 select-none shadow-lg">
+      <div className="flex items-center justify-around max-w-md mx-auto relative">
+        {/* Home */}
+        <button
+          onClick={() => navigate("/")}
+          className={`flex flex-col items-center gap-0.5 text-[11px] font-semibold transition-colors ${
+            activeTab === "home" ? "text-indigo-600 font-extrabold" : "text-slate-500 hover:text-indigo-600"
+          }`}
+        >
+          <Home className="w-5 h-5" />
+          <span>Home</span>
+        </button>
+
+        {/* Learn - the Learning Hub/Summary page. Reverted: it briefly
+            pointed at AI Tutor, but AI Tutor must only open from the
+            elevated center button. */}
+        <button
+          onClick={() => handleTabChange("learning")}
+          className={`flex flex-col items-center gap-0.5 text-[11px] font-semibold transition-colors ${
+            activeTab === "learning" ? "text-indigo-600 font-extrabold" : "text-slate-500 hover:text-indigo-600"
+          }`}
+        >
+          <BookOpen className="w-5 h-5" />
+          <span>Learn</span>
+        </button>
+
+        {/* Elevated Floating AI Tutor Button */}
+        <div className="relative -top-4 flex flex-col items-center">
+          <button
+            onClick={() => {
+              handleTabChange("tutor");
+              onOpenTutorSheet();
+            }}
+            className="w-13 h-13 rounded-full bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/30 hover:scale-105 active:scale-95 transition-all ring-4 ring-white"
+            title="AI Tutor Assistant"
+          >
+            <Sparkles className="w-6 h-6 fill-current text-white animate-pulse" />
+          </button>
+          <span className={`block text-[10px] font-bold text-center mt-0.5 ${
+            activeTab === "tutor" ? "text-indigo-600 font-extrabold" : "text-indigo-600 font-bold"
+          }`}>
+            AI Tutor
+          </span>
+        </div>
+
+        {/* Summary - was "Library" pointing at the Upload tab; renamed and
+            repointed to the Learning Hub/Summary page since "Learn" above
+            now goes to the AI Tutor instead. */}
+        <button
+          onClick={() => handleTabChange("learning")}
+          className={`flex flex-col items-center gap-0.5 text-[11px] font-semibold transition-colors ${
+            activeTab === "learning" ? "text-indigo-600 font-extrabold" : "text-slate-500 hover:text-indigo-600"
+          }`}
+        >
+          <FileText className="w-5 h-5" />
+          <span>Summary</span>
+        </button>
+
+        {/* Assessment - was mislabeled "Profile" with a User icon, but
+            already navigated to the assessment tab; just the label/icon
+            were wrong. */}
+        <button
+          onClick={() => handleTabChange("assessment")}
+          className={`flex flex-col items-center gap-0.5 text-[11px] font-semibold transition-colors ${
+            activeTab === "assessment" ? "text-indigo-600 font-extrabold" : "text-slate-500 hover:text-indigo-600"
+          }`}
+        >
+          <ClipboardCheck className="w-5 h-5" />
+          <span>Assessment</span>
+        </button>
+      </div>
+    </nav>
+  );
+}

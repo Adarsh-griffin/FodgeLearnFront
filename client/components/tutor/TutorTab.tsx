@@ -1,29 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth, SignInButton } from "@clerk/react";
-import { FileText, GraduationCap, CheckCircle2, Home, Upload, BookOpen } from "lucide-react";
-import { apiService, FileInfo, StudyPlan, DiagnosticResult } from "@/lib/api";
+import { FileText, GraduationCap, CheckCircle2, Menu, Search, Bell } from "lucide-react";
+import { apiService, FileInfo, StudyPlan, DiagnosticResult, LessonStep } from "@/lib/api";
 import { getTutorAuthHeaders } from "@/lib/identity";
 import { OnboardingStep } from "./OnboardingStep";
 import { DiagnosticQuiz } from "./DiagnosticQuiz";
 import { RoadmapView } from "./RoadmapView";
 import { LessonView } from "./LessonView";
+import { TutorSidebar } from "./TutorSidebar";
+import { TutorAssistantPanel } from "./TutorAssistantPanel";
+import { MobileBottomNav } from "./MobileBottomNav";
+import { MobileTutorSheet } from "./MobileTutorSheet";
+import { MobileNavDrawer } from "./MobileNavDrawer";
 
 type Stage = "loading" | "select_file" | "onboarding" | "diagnostic" | "generating_plan" | "roadmap" | "lesson" | "complete";
 
 const FILE_ID_KEY = "neurolearn_tutor_file_id";
 const FILE_NAME_KEY = "neurolearn_tutor_file_name";
 
-/**
- * Orchestrates the full AI Tutor flow: pick a document -> onboarding
- * (goal + time) -> adaptive diagnostic (Phase 2) -> generated roadmap
- * (Phase 3) -> lesson-by-lesson delivery (Phase 4) -> completion.
- *
- * Identity is never blocking here: a student reaches every stage whether
- * signed in or anonymous (see client/lib/identity.ts) - getAuthHeaders()
- * always resolves a fresh token/id right before each API call rather than
- * a precomputed one, since a Clerk session token is short-lived and a
- * full diagnostic + lesson run can span several minutes.
- */
 interface TutorTabProps {
   handleTabChange: (tab: "upload" | "learning" | "assessment" | "tutor") => void;
   navigate: (path: string | number) => void;
@@ -40,15 +34,23 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
   const [availableMinutes, setAvailableMinutes] = useState<number>(30);
   const [plan, setPlan] = useState<StudyPlan | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
+  const [currentLesson, setCurrentLesson] = useState<LessonStep | null>(null);
+
+  // Mobile Sheet & Drawer States
+  const [isMobileTutorSheetOpen, setIsMobileTutorSheetOpen] = useState(false);
+  const [isMobileNavDrawerOpen, setIsMobileNavDrawerOpen] = useState(false);
+
+  const handleMasteryUpdate = (topicId: string, mastery: number) => {
+    setPlan((prev) =>
+      prev ? { ...prev, steps: prev.steps.map((s) => (s.topic_id === topicId ? { ...s, mastery } : s)) } : prev,
+    );
+  };
 
   const getAuthHeaders = useCallback(
     () => getTutorAuthHeaders(!!isSignedIn, getToken),
     [isSignedIn, getToken],
   );
 
-  // Load the file list once Clerk has resolved sign-in state, and restore
-  // a previously-selected document (if any) so a page refresh doesn't
-  // dump the student back to square one.
   useEffect(() => {
     if (!isLoaded) return;
     let cancelled = false;
@@ -96,11 +98,6 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
     setStage("select_file");
   };
 
-  // Shared by both entry points into plan generation: after a completed
-  // diagnostic, or directly from onboarding for "Learn from scratch" (see
-  // below - there's nothing to diagnose yet, so skipping straight here
-  // with no profile/mastery is correct: plan/generate already treats a
-  // missing mastery entry as 0%, i.e. "teach everything from zero").
   const generatePlan = async (goalForPlan: string, minutesForPlan: number) => {
     if (!selectedFileId) return;
     setStage("generating_plan");
@@ -120,10 +117,6 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
     setGoal(chosenGoal);
     setAvailableMinutes(minutes);
     if (chosenGoal === "Learn from scratch") {
-      // A student who picked this has nothing to be quizzed on yet -
-      // asking diagnostic questions before any teaching has happened
-      // doesn't make sense for them. Skip straight to the content/roadmap
-      // path instead of the question-based diagnostic.
       generatePlan(chosenGoal, minutes);
     } else {
       setStage("diagnostic");
@@ -137,91 +130,52 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
   const handleStartLearning = () => setStage("lesson");
   const handleAllDone = () => setStage("complete");
 
-  // Same rail every other tab renders (Upload/Learning/Assessment each keep
-  // their own copy) - the AI Tutor tab needs it too, so a student can get
-  // back to another tab without hitting the browser back button.
-  const rail = (
-    <div className="w-16 sm:w-20 bg-secondary flex flex-col items-center py-4 gap-3 flex-shrink-0">
-      <button
-        onClick={() => navigate("/")}
-        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-        title="Home"
-      >
-        <Home className="w-5 h-5" />
-      </button>
-      <button
-        onClick={() => handleTabChange("tutor")}
-        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors bg-primary/10 text-primary"
-        title="AI Tutor"
-      >
-        <GraduationCap className="w-5 h-5" />
-      </button>
-      <button
-        onClick={() => handleTabChange("learning")}
-        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-        title="Learning Hub"
-      >
-        <BookOpen className="w-5 h-5" />
-      </button>
-      <button
-        onClick={() => handleTabChange("upload")}
-        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-        title="Upload Documents"
-      >
-        <Upload className="w-5 h-5" />
-      </button>
-      <button
-        onClick={() => handleTabChange("assessment")}
-        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-        title="Assessment"
-      >
-        <FileText className="w-5 h-5" />
-      </button>
-    </div>
-  );
-
   if (stage === "loading" || !isLoaded) {
     return (
-      <div className="flex-1 flex min-h-0">
-        {rail}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
+      <div className="flex-1 flex items-center justify-center bg-[#FAFAFC]">
+        <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (stage === "select_file") {
     return (
-      <div className="flex-1 flex min-h-0">
-        {rail}
+      <div className="flex-1 flex min-h-0 bg-[#FAFAFC]">
+        <TutorSidebar
+          activeTab="tutor"
+          handleTabChange={handleTabChange}
+          navigate={navigate}
+          fileName={selectedFileName}
+          plan={plan}
+          onChangeDocument={handleChangeDocument}
+        />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-4 sm:p-8 text-center overflow-y-auto">
-          <div className="w-16 h-16 gradient-brand rounded-full flex items-center justify-center">
+          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-lg sm:text-xl font-bold text-foreground">Which document do you want to learn?</h2>
-          {filesError && <p className="text-sm text-destructive">{filesError}</p>}
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Which document do you want to learn?</h2>
+          {filesError && <p className="text-sm text-rose-600">{filesError}</p>}
           {files.length === 0 && !filesError ? (
-            <p className="text-sm text-muted-foreground">Upload a document first from the Upload tab.</p>
+            <p className="text-sm text-slate-500">Upload a document first from the Upload tab.</p>
           ) : (
             <div className="w-full max-w-md space-y-2">
               {files.map((f) => (
                 <button
                   key={f._id}
                   onClick={() => handleSelectFile(f)}
-                  className="w-full flex items-center gap-3 p-3 bg-card rounded-lg border border-border hover:border-primary/40 hover:bg-secondary transition-colors text-left"
+                  className="w-full flex items-center gap-3 p-3.5 bg-white rounded-xl border border-slate-200/80 hover:border-indigo-400 hover:shadow-sm transition-all text-left group"
                 >
-                  <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <span className="text-sm text-foreground truncate">{f.originalName}</span>
+                  <FileText className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 flex-shrink-0 transition-colors" />
+                  <span className="text-sm font-medium text-slate-800 truncate">{f.originalName}</span>
                 </button>
               ))}
             </div>
           )}
           {!isSignedIn && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Progress is saved to this device only.{" "}
+            <p className="text-xs text-slate-400 mt-2">
+              Progress saved on this device.{" "}
               <SignInButton mode="modal" forceRedirectUrl="/study">
-                <button className="text-primary hover:underline">Sign in to sync it</button>
+                <button className="text-indigo-600 hover:underline font-semibold">Sign in to sync</button>
               </SignInButton>
             </p>
           )}
@@ -230,66 +184,143 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
     );
   }
 
-  if (!selectedFileId) return null; // unreachable past this point, but keeps TS happy
+  if (!selectedFileId) return null;
 
   return (
-    <div className="flex-1 flex min-h-0">
-      {rail}
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border flex-shrink-0 gap-2">
-          <span className="text-sm text-muted-foreground truncate">{selectedFileName}</span>
-          <button onClick={handleChangeDocument} className="text-xs text-primary hover:underline flex-shrink-0">
-            Change document
+    <div className="flex-1 flex flex-col min-h-0 bg-[#FAFAFC] overflow-hidden relative">
+      {/* Mobile Sticky Header Bar */}
+      <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200/80 select-none z-30 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsMobileNavDrawerOpen(true)}
+            className="p-1.5 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors"
+          >
+            <Menu className="w-5 h-5" />
           </button>
+          <img src="/navbarlogo.png" alt="Learnfodge" className="h-6 w-auto object-contain" />
         </div>
 
-        {stage === "onboarding" && <OnboardingStep onComplete={handleOnboardingComplete} />}
-
-        {stage === "diagnostic" && (
-          <DiagnosticQuiz
-            fileId={selectedFileId}
-            goal={goal}
-            getAuthHeaders={getAuthHeaders}
-            onComplete={handleDiagnosticComplete}
-          />
-        )}
-
-        {stage === "generating_plan" && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-muted-foreground">Building your personalized learning path...</p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsMobileTutorSheetOpen(true)}
+            className="p-2 text-slate-500 hover:text-indigo-600 rounded-full hover:bg-slate-100 transition-colors"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+          <button className="p-2 text-slate-500 hover:text-indigo-600 rounded-full hover:bg-slate-100 transition-colors">
+            <Bell className="w-4 h-4" />
+          </button>
+          <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+            A
           </div>
-        )}
-
-        {stage === "roadmap" && plan && <RoadmapView plan={plan} onStart={handleStartLearning} />}
-        {stage === "roadmap" && !plan && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
-            <p className="text-destructive">{planError}</p>
-          </div>
-        )}
-
-        {stage === "lesson" && (
-          <LessonView fileId={selectedFileId} getAuthHeaders={getAuthHeaders} onAllDone={handleAllDone} />
-        )}
-
-        {stage === "complete" && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-4 sm:p-8 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
-            </div>
-            <h2 className="text-lg sm:text-xl font-bold text-foreground">Session complete!</h2>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              You've worked through every topic in this plan. Come back any time to review or build a new plan.
-            </p>
-            <button
-              onClick={() => setStage("onboarding")}
-              className="px-6 py-3 gradient-brand text-white rounded-xl font-semibold shadow-premium hover:opacity-95 active:scale-[0.98] transition-all"
-            >
-              Start a New Session
-            </button>
-          </div>
-        )}
+        </div>
       </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* Desktop Left Sidebar (hidden on mobile) */}
+        <TutorSidebar
+          activeTab="tutor"
+          handleTabChange={handleTabChange}
+          navigate={navigate}
+          fileName={selectedFileName}
+          plan={plan}
+          currentTopicId={currentLesson?.topic_id}
+          onChangeDocument={handleChangeDocument}
+        />
+
+        <div className="flex-1 flex min-h-0 overflow-hidden w-full">
+          {stage === "onboarding" && <OnboardingStep onComplete={handleOnboardingComplete} />}
+
+          {stage === "diagnostic" && (
+            <DiagnosticQuiz
+              fileId={selectedFileId}
+              goal={goal}
+              getAuthHeaders={getAuthHeaders}
+              onComplete={handleDiagnosticComplete}
+            />
+          )}
+
+          {stage === "generating_plan" && (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3">
+              <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm font-medium text-slate-600">Building your personalized learning roadmap...</p>
+            </div>
+          )}
+
+          {stage === "roadmap" && plan && <RoadmapView plan={plan} onStart={handleStartLearning} />}
+
+          {stage === "lesson" && plan && (
+            <div className="flex-1 flex min-h-0 overflow-hidden w-full">
+              <LessonView
+                fileId={selectedFileId}
+                goal={goal}
+                plan={plan}
+                getAuthHeaders={getAuthHeaders}
+                onAllDone={handleAllDone}
+                onLessonChange={setCurrentLesson}
+                onMasteryUpdate={handleMasteryUpdate}
+              />
+              {/* Desktop Right Panel (hidden on mobile) */}
+              <TutorAssistantPanel
+                fileName={selectedFileName}
+                plan={plan}
+                currentTopicId={currentLesson?.topic_id}
+                currentTopicTitle={currentLesson?.topic_title}
+                currentExplanation={currentLesson?.explanation}
+              />
+            </div>
+          )}
+
+          {stage === "complete" && (
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 p-4 sm:p-8 text-center">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Session Complete!</h2>
+              <p className="text-sm text-slate-500 max-w-sm">
+                You've mastered every topic in this learning session. Revisit anytime or start a new document.
+              </p>
+              <button
+                onClick={() => setStage("onboarding")}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-md"
+              >
+                Start New Session
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile Drawer (Left Navigation & Topics) */}
+      <MobileNavDrawer
+        isOpen={isMobileNavDrawerOpen}
+        onClose={() => setIsMobileNavDrawerOpen(false)}
+        activeTab="tutor"
+        handleTabChange={handleTabChange}
+        navigate={navigate}
+        fileName={selectedFileName}
+        plan={plan}
+        currentTopicId={currentLesson?.topic_id}
+        onChangeDocument={handleChangeDocument}
+      />
+
+      {/* Mobile AI Tutor Bottom Sheet */}
+      <MobileTutorSheet
+        isOpen={isMobileTutorSheetOpen}
+        onClose={() => setIsMobileTutorSheetOpen(false)}
+        fileName={selectedFileName}
+        currentTopicTitle={currentLesson?.topic_title}
+        currentExplanation={currentLesson?.explanation}
+      />
+
+      {/* Mobile Bottom Dock Bar */}
+      <MobileBottomNav
+        activeTab="tutor"
+        handleTabChange={handleTabChange}
+        navigate={navigate}
+        onOpenTutorSheet={() => setIsMobileTutorSheetOpen(true)}
+      />
     </div>
   );
 }

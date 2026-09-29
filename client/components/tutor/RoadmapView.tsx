@@ -2,14 +2,17 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, Clock, ArrowDown } from "lucide-react";
 import { StudyPlan, StudyPlanStep, MasteryBand } from "@/lib/api";
 
-const BAND_STYLES: Record<MasteryBand, { label: string; bg: string; text: string; bar: string }> = {
+// Exported so LessonView/TutorTopicsPanel (the lesson-delivery screen) can
+// use the exact same band/mode vocabulary as the roadmap - one source of
+// truth for how a mastery band or delivery mode is labeled/colored.
+export const BAND_STYLES: Record<MasteryBand, { label: string; bg: string; text: string; bar: string }> = {
   teach: { label: "Not yet learned", bg: "bg-red-50", text: "text-red-700", bar: "bg-red-400" },
   practice: { label: "Developing", bg: "bg-amber-50", text: "text-amber-700", bar: "bg-amber-400" },
   apply: { label: "Almost there", bg: "bg-blue-50", text: "text-blue-700", bar: "bg-blue-400" },
   review: { label: "Already strong", bg: "bg-green-50", text: "text-green-700", bar: "bg-green-400" },
 };
 
-const MODE_LABELS: Record<string, string> = {
+export const MODE_LABELS: Record<string, string> = {
   worked_example: "Worked examples",
   socratic: "Guided questions",
   direct_explanation: "Direct explanation",
@@ -64,7 +67,7 @@ function StepCard({ step, index }: { step: StudyPlanStep; index: number }) {
 
 export function RoadmapView({ plan, onStart }: { plan: StudyPlan; onStart: () => void }) {
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+    <div className="flex-1 overflow-y-auto hide-scrollbar p-4 sm:p-8 pb-32 sm:pb-12">
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1">Your Learning Path</h1>
@@ -94,10 +97,10 @@ export function RoadmapView({ plan, onStart }: { plan: StudyPlan; onStart: () =>
           </div>
         )}
 
-        <div className="mt-8 flex justify-center">
+        <div className="mt-8 mb-6 flex justify-center">
           <button
             onClick={onStart}
-            className="w-full sm:w-auto px-8 py-3.5 gradient-brand text-white rounded-xl font-semibold shadow-premium hover:opacity-95 active:scale-[0.98] transition-all"
+            className="w-full sm:w-auto px-8 py-4 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-md hover:bg-indigo-700 active:scale-[0.98] transition-all"
           >
             Start Learning
           </button>

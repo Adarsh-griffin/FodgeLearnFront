@@ -2,9 +2,13 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap } from "lucide-react";
 import { TutorTab } from "@/components/tutor/TutorTab";
+import { MobileUploadView } from "@/components/tutor/MobileUploadView";
+import { MobileBottomNav } from "@/components/tutor/MobileBottomNav";
+import { MobileTutorSheet } from "@/components/tutor/MobileTutorSheet";
 import { apiService, UploadResponse, ReferenceLink, ProcessingStatus, AssessmentQuestion, AssessmentFeedback } from "@/lib/api";
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
 import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import 'katex/dist/katex.min.css';
@@ -138,8 +142,8 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
   return (
     <div className="h-full w-full flex flex-col min-h-0">
       <div className="flex-1 flex min-h-0">
-        {/* Left Sidebar */}
-        <div className="w-16 sm:w-20 bg-secondary flex flex-col items-center py-4 gap-3">
+        {/* Left Sidebar (Desktop Only) */}
+        <div className="hidden lg:flex w-16 sm:w-20 bg-secondary flex-col items-center py-4 gap-3 flex-shrink-0">
           <button
             onClick={() => navigate("/")}
             className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
@@ -177,7 +181,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
           </button>
         </div>
 
-        <div className="flex-1 p-8 overflow-y-auto min-h-0 hide-scrollbar">
+        <div className="flex-1 p-4 sm:p-8 overflow-y-auto min-h-0 hide-scrollbar pb-24 lg:pb-8">
           <div className="max-w-4xl mx-auto">
             {/* Error Display */}
             {error && (
@@ -295,7 +299,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                           <div className="bg-gray-50 rounded-lg p-6 border-l-4 border-indigo-500">
                             <div className="text-lg text-gray-800 leading-relaxed prose prose-indigo max-w-none">
                               <div className="response-container">
-                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeRaw, rehypeKatex]}>
                                   {formatContent(question)}
                                 </ReactMarkdown>
                               </div>
@@ -325,7 +329,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                                   >
                                     <span className="font-bold mr-2 text-lg align-top">{opt.key})</span>
                                     <div className="inline-block prose prose-sm max-w-none">
-                                      <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                      <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeRaw, rehypeKatex]}>
                                         {formatContent(opt.text)}
                                       </ReactMarkdown>
                                     </div>
@@ -351,7 +355,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-yellow-800 text-sm">
                                   <strong>Hint:</strong>
                                   <div className="mt-1 prose prose-sm max-w-none text-yellow-900">
-                                    <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                    <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeRaw, rehypeKatex]}>
                                       {formatContent(mcqData.hint)}
                                     </ReactMarkdown>
                                   </div>
@@ -369,7 +373,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                                       <div className="text-red-800 mt-2 text-sm">
                                         <strong>Explanation:</strong>
                                         <div className="mt-1 prose prose-sm max-w-none text-red-900">
-                                          <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                          <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeRaw, rehypeKatex]}>
                                             {formatContent(mcqData.explanation)}
                                           </ReactMarkdown>
                                         </div>
@@ -434,7 +438,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                             <p className="text-sm text-gray-600 mb-2">Question:</p>
                             <div className="text-gray-800 prose prose-sm max-w-none">
                               <div className="response-container">
-                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeRaw, rehypeKatex]}>
                                   {formatContent(question)}
                                 </ReactMarkdown>
                               </div>
@@ -536,7 +540,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                               <p className="text-sm text-gray-600 mb-2">Question:</p>
                               <div className="text-gray-800 mb-4 prose prose-sm max-w-none">
                                 <div className="response-container">
-                                  <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                  <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeRaw, rehypeKatex]}>
                                     {formatContent(question)}
                                   </ReactMarkdown>
                                 </div>
@@ -552,7 +556,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                               </div>
                               <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed">
                                 <div className={`response-container ${status}`}>
-                                  <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                  <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeRaw, rehypeKatex]}>
                                     {formatContent(feedback)}
                                   </ReactMarkdown>
                                 </div>
@@ -660,6 +664,7 @@ export function StudyPage() {
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [processingStatus, setProcessingStatus] = useState<{ [key: string]: ProcessingStatus }>({});
   const [successMessages, setSuccessMessages] = useState<{ [key: string]: boolean }>({});
+  const [isMobileTutorSheetOpen, setIsMobileTutorSheetOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Topic Learning State
@@ -944,8 +949,31 @@ startxref
 
   const UploadTab = () => (
     <div className="h-full w-full flex flex-col">
-      <div className="flex-1 flex">
-        <div className="w-16 sm:w-20 bg-secondary flex flex-col items-center py-4 gap-3">
+      {/* Mobile Upload Composition (< lg) */}
+      <div className="lg:hidden flex-1 flex min-h-0 w-full">
+        <MobileUploadView
+          handleDragOver={handleDragOver}
+          handleDragLeave={handleDragLeave}
+          handleDrop={handleDrop}
+          isDragging={isDragging}
+          fileInputRef={fileInputRef}
+          handleFileSelect={handleFileSelect}
+          handleTopicNameSubmit={handleTopicNameSubmit}
+          isSubmittingTopic={isSubmittingTopic}
+          activeTab={activeTab}
+          handleTabChange={handleTabChange}
+          navigate={navigate}
+          files={files}
+          uploadProgress={uploadProgress}
+          processingStatus={processingStatus}
+          successMessages={successMessages}
+          removeFile={removeFile}
+        />
+      </div>
+
+      {/* Desktop Upload Composition (>= lg) */}
+      <div className="hidden lg:flex flex-1 min-h-0 w-full">
+        <div className="w-16 sm:w-20 bg-secondary flex flex-col items-center py-4 gap-3 flex-shrink-0">
           <button
             onClick={() => navigate("/")}
             className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
@@ -987,7 +1015,7 @@ startxref
           </button>
         </div>
 
-        <div className="flex-1 p-8">
+        <div className="flex-1 min-h-0 overflow-y-auto p-8">
           <div className="max-w-4xl mx-auto">
             <div
               onDragOver={handleDragOver}
@@ -1650,10 +1678,174 @@ startxref
       }
     };
 
+    // Shared between the desktop 3-column layout and the mobile
+    // single-column layout below - the text-split + image-interleave logic
+    // is non-trivial enough that duplicating it verbatim would risk the
+    // two views silently drifting apart.
+    const renderSummaryWithImages = () => {
+      if (textLoading) {
+        return (
+          <div className="bg-white rounded-lg p-4 border">
+            <div className="flex items-center justify-center py-8">
+              <div className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+              <span className="ml-3 text-sm text-gray-600">Loading summary...</span>
+            </div>
+          </div>
+        );
+      }
+      if (!summaryText) {
+        return (
+          <div className="bg-white rounded-lg p-4 border">
+            <div className="text-center text-gray-500">
+              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                <BookOpen size={24} className="text-gray-400" />
+              </div>
+              <h5 className="font-semibold text-gray-600 mb-2">AI Summary</h5>
+              <p className="text-sm text-gray-500">Upload a document to generate AI-powered summaries and key insights</p>
+            </div>
+          </div>
+        );
+      }
+
+      const midPoint = Math.floor(summaryText.length / 2);
+      let splitIndex = summaryText.indexOf('.', midPoint);
+      if (splitIndex === -1) splitIndex = midPoint;
+      else splitIndex += 1;
+
+      const part1 = summaryText.slice(0, splitIndex);
+      const part2 = summaryText.slice(splitIndex);
+      const firstRowImages = summaryImages.slice(0, 2);
+      const secondRowImages = summaryImages.slice(2);
+
+      const renderImageRow = (images: string[], keyPrefix: string) =>
+        images.length > 0 && (
+          <div className="grid grid-cols-2 gap-4 my-4">
+            {images.map((imgUrl, idx) => (
+              <div
+                key={`${keyPrefix}-${idx}`}
+                className="rounded-lg overflow-hidden border border-gray-200 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setZoomedImage(imgUrl)}
+              >
+                <img
+                  src={imgUrl}
+                  alt="Educational Diagram"
+                  className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
+              </div>
+            ))}
+          </div>
+        );
+
+      // The AI summary occasionally comes back as a markdown table (e.g. a
+      // "Section | What it Covers" breakdown). Tailwind Typography's plain
+      // `.prose table` has no horizontal-scroll wrapper, so on a narrow
+      // mobile screen the browser just crushes each column - confirmed:
+      // "Foundations" was splitting into "Found"/"ations" mid-word. Wrap it
+      // in its own scroll container instead of letting it collapse.
+      const markdownComponents = {
+        table: ({ children }: any) => (
+          <div className="overflow-x-auto -mx-1 px-1">
+            <table className="min-w-full text-left border-collapse">{children}</table>
+          </div>
+        ),
+        th: ({ children }: any) => (
+          <th className="p-2 border-b border-gray-200 bg-gray-50 font-semibold whitespace-nowrap">{children}</th>
+        ),
+        td: ({ children }: any) => (
+          <td className="p-2 border-b border-gray-100 align-top">{children}</td>
+        ),
+      };
+
+      return (
+        <div className="bg-white rounded-lg p-4 border space-y-6">
+          <div className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none">
+            <ReactMarkdown
+              remarkPlugins={[remarkMath, remarkGfm]}
+              rehypePlugins={[rehypeRaw, rehypeKatex]}
+              components={markdownComponents}
+            >
+              {part1}
+            </ReactMarkdown>
+          </div>
+          {renderImageRow(firstRowImages, 'row1')}
+          <div className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none">
+            <ReactMarkdown
+              remarkPlugins={[remarkMath, remarkGfm]}
+              rehypePlugins={[rehypeRaw, rehypeKatex]}
+              components={markdownComponents}
+            >
+              {part2}
+            </ReactMarkdown>
+          </div>
+          {renderImageRow(secondRowImages, 'row2')}
+        </div>
+      );
+    };
+
+    const renderReferenceLinksList = () => (
+      <div className="space-y-3">
+        <h5 className="font-semibold text-gray-800">Reference Links</h5>
+        {linksLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="ml-2 text-sm text-gray-600">Loading links...</span>
+          </div>
+        ) : referenceLinks.length > 0 ? (
+          <div className="space-y-2">
+            {referenceLinks.map((link, index) => (
+              <div key={index} className="p-3 bg-white rounded-lg border hover:bg-gray-50 transition-colors">
+                <a href={link.url} target="_blank" rel="noopener noreferrer" className="block">
+                  <h6 className="text-sm font-medium text-blue-600 hover:text-blue-800 mb-1">{link.title}</h6>
+                  {link.description && (
+                    <p className="text-xs text-gray-600 mb-2">{link.description}</p>
+                  )}
+                  <p className="text-xs text-gray-500 break-all">{link.url}</p>
+                </a>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-xs text-gray-500">No reference links available</p>
+          </div>
+        )}
+      </div>
+    );
+
+    const renderVideoPlayer = () => (
+      <div className="bg-gray-100 rounded-lg aspect-video flex items-center justify-center overflow-hidden">
+        {videoLoading ? (
+          <div className="flex flex-col items-center text-gray-500">
+            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+            <p className="text-sm">Preparing your video...</p>
+          </div>
+        ) : videoUrl ? (
+          <video
+            key={videoUrl}
+            src={videoUrl}
+            controls
+            preload="metadata"
+            loop
+            playsInline
+            className="w-full h-full object-cover rounded-lg"
+          />
+        ) : (
+          <div className="text-gray-500 text-center">
+            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
+              <span className="text-2xl">▶</span>
+            </div>
+            <p className="text-sm">Video will appear here</p>
+            <p className="text-xs text-gray-400">Generate a lipsync video to get started</p>
+          </div>
+        )}
+      </div>
+    );
+
     return (
       <div className="h-full w-full flex flex-col min-h-0">
         <div className="flex-1 flex min-h-0">
-          <div className="w-16 sm:w-20 bg-secondary flex flex-col items-center py-4 gap-3">
+          <div className="hidden lg:flex w-16 sm:w-20 bg-secondary flex-col items-center py-4 gap-3 flex-shrink-0">
             <button
               onClick={() => navigate("/")}
               className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
@@ -1696,7 +1888,8 @@ startxref
           </div>
 
           <div className="flex-1 flex flex-col min-h-0">
-            <div ref={containerRef} className="flex-1 flex flex-row overflow-hidden min-h-0">
+            {/* Desktop: resizable 3-column layout (Video+Links / AI Summary / AI Tutor chat) */}
+            <div ref={containerRef} className="hidden lg:flex flex-1 flex-row overflow-hidden min-h-0">
               <div
                 className="border-r border-gray-200 flex flex-col min-w-0 min-h-0"
                 style={{ width: `${sectionWidths[0]}%` }}
@@ -1730,32 +1923,7 @@ startxref
                         </button>
                       </div>
                     </div>
-                    <div className="bg-gray-100 rounded-lg aspect-video flex items-center justify-center overflow-hidden">
-                      {videoLoading ? (
-                        <div className="flex flex-col items-center text-gray-500">
-                          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
-                          <p className="text-sm">Preparing your video...</p>
-                        </div>
-                      ) : videoUrl ? (
-                        <video
-                          key={videoUrl}
-                          src={videoUrl}
-                          controls
-                          preload="metadata"
-                          loop
-                          playsInline
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      ) : (
-                        <div className="text-gray-500 text-center">
-                          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
-                            <span className="text-2xl">▶</span>
-                          </div>
-                          <p className="text-sm">Video will appear here</p>
-                          <p className="text-xs text-gray-400">Generate a lipsync video to get started</p>
-                        </div>
-                      )}
-                    </div>
+                    {renderVideoPlayer()}
 
                     {videoError && (
                       <p className="text-xs text-red-600 mt-2">{videoError}</p>
@@ -1764,40 +1932,7 @@ startxref
 
                   {/* Reference Links - Scrollable area */}
                   <div className="flex-1 p-4 pt-2 overflow-y-auto min-h-0 hide-scrollbar">
-                    <div className="space-y-3">
-                      <h5 className="font-semibold text-gray-800">Reference Links</h5>
-                      {linksLoading ? (
-                        <div className="flex items-center justify-center py-4">
-                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                          <span className="ml-2 text-sm text-gray-600">Loading links...</span>
-                        </div>
-                      ) : referenceLinks.length > 0 ? (
-                        <div className="space-y-2">
-                          {referenceLinks.map((link, index) => (
-                            <div key={index} className="p-3 bg-white rounded-lg border hover:bg-gray-50 transition-colors">
-                              <a
-                                href={link.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block"
-                              >
-                                <h6 className="text-sm font-medium text-blue-600 hover:text-blue-800 mb-1">
-                                  {link.title}
-                                </h6>
-                                {link.description && (
-                                  <p className="text-xs text-gray-600 mb-2">{link.description}</p>
-                                )}
-                                <p className="text-xs text-gray-500 break-all">{link.url}</p>
-                              </a>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-4">
-                          <p className="text-xs text-gray-500">No reference links available</p>
-                        </div>
-                      )}
-                    </div>
+                    {renderReferenceLinksList()}
                   </div>
                 </div>
               </div>
@@ -1913,123 +2048,8 @@ startxref
 
                   {/* Content - Scrollable area */}
                   <div className="flex-1 p-4 pt-2 overflow-y-auto min-h-0 hide-scrollbar">
-                    {textLoading ? (
-                      <div className="bg-white rounded-lg p-4 border">
-                        <div className="flex items-center justify-center py-8">
-                          <div className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
-                          <span className="ml-3 text-sm text-gray-600">Loading summary...</span>
-                        </div>
-                      </div>
-                    ) : summaryText ? (
-                      <div className="bg-white rounded-lg p-4 border space-y-6">
-                        {/* Logic to split text and interleave images */}
-                        {(() => {
-                          // Simple split into two halves
-                          const midPoint = Math.floor(summaryText.length / 2);
-                          // Find nearest period to avoid cutting sentences
-                          let splitIndex = summaryText.indexOf('.', midPoint);
-                          if (splitIndex === -1) splitIndex = midPoint; // Fallback
-                          else splitIndex += 1; // Include the period
-
-                          const part1 = summaryText.slice(0, splitIndex);
-                          const part2 = summaryText.slice(splitIndex);
-
-                          const firstRowImages = summaryImages.slice(0, 2);
-                          const secondRowImages = summaryImages.slice(2);
-
-                          return (
-                            <>
-                              {/* First Text Part */}
-                              <div className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
-                                  {part1}
-                                </ReactMarkdown>
-                              </div>
-
-                              {/* First Image Row */}
-                              {firstRowImages.length > 0 && (
-                                <div className="grid grid-cols-2 gap-4 my-4">
-                                  {firstRowImages.map((imgUrl, idx) => (
-                                    <div
-                                      key={`row1-${idx}`}
-                                      className="rounded-lg overflow-hidden border border-gray-200 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                                      onClick={() => setZoomedImage(imgUrl)}
-                                    >
-                                      <img
-                                        src={imgUrl}
-                                        alt="Educational Diagram"
-                                        className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
-                                        loading="lazy"
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Second Text Part */}
-                              <div className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
-                                  {part2}
-                                </ReactMarkdown>
-                              </div>
-
-                              {/* Second Image Row (Remaining images) */}
-                              {secondRowImages.length > 0 && (
-                                <div className="grid grid-cols-2 gap-4 my-4">
-                                  {secondRowImages.map((imgUrl, idx) => (
-                                    <div
-                                      key={`row2-${idx}`}
-                                      className="rounded-lg overflow-hidden border border-gray-200 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                                      onClick={() => setZoomedImage(imgUrl)}
-                                    >
-                                      <img
-                                        src={imgUrl}
-                                        alt="Educational Diagram"
-                                        className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
-                                        loading="lazy"
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    ) : (
-                      <div className="bg-white rounded-lg p-4 border">
-                        <div className="text-center text-gray-500">
-                          <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <BookOpen size={24} className="text-gray-400" />
-                          </div>
-                          <h5 className="font-semibold text-gray-600 mb-2">AI Summary</h5>
-                          <p className="text-sm text-gray-500">Upload a document to generate AI-powered summaries and key insights</p>
-                        </div>
-                      </div>
-                    )}
+                    {renderSummaryWithImages()}
                   </div>
-
-                  {/* Image Zoom Modal */}
-                  {zoomedImage && (
-                    <div
-                      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-                      onClick={() => setZoomedImage(null)}
-                    >
-                      <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center">
-                        <button
-                          className="absolute -top-10 right-0 text-white hover:text-gray-300"
-                          onClick={() => setZoomedImage(null)}
-                        >
-                          <span className="text-2xl">&times;</span> Close
-                        </button>
-                        <img
-                          src={zoomedImage}
-                          alt="Zoomed View"
-                          className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-white"
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -2143,7 +2163,7 @@ startxref
                           >
                             <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
                               <div className="response-container">
-                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeRaw, rehypeKatex]}>
                                   {message.content}
                                 </ReactMarkdown>
                               </div>
@@ -2233,6 +2253,73 @@ startxref
 
 
             </div>
+
+            {/* Mobile: single scrollable column - Video, then Summary (with
+                interleaved images), then Reference Links. The AI Tutor chat
+                column is intentionally left out here - that experience now
+                lives on its own dedicated tab (see MobileBottomNav). */}
+            <div className="lg:hidden flex-1 overflow-y-auto min-h-0 hide-scrollbar p-4 pb-24 space-y-4">
+              <div className="bg-blue-50 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h5 className="font-semibold text-gray-800">Video Explanation</h5>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleRefreshVideo}
+                      disabled={videoLoading}
+                      className="text-xs px-2 py-1 bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors disabled:opacity-50"
+                    >
+                      Refresh
+                    </button>
+                    <button
+                      onClick={handleGenerateVideo}
+                      disabled={videoLoading}
+                      className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {videoLoading ? 'Working...' : 'Generate'}
+                    </button>
+                  </div>
+                </div>
+                {renderVideoPlayer()}
+                {videoError && <p className="text-xs text-red-600 mt-2">{videoError}</p>}
+              </div>
+
+              <div className="bg-green-50 rounded-xl p-4">
+                <h5 className="font-semibold text-gray-800 flex items-center gap-2 mb-3">
+                  <BookOpen size={20} className="text-green-600" />
+                  AI Summary
+                </h5>
+                {renderSummaryWithImages()}
+              </div>
+
+              <div className="bg-blue-50 rounded-xl p-4">
+                {renderReferenceLinksList()}
+              </div>
+            </div>
+
+            {/* Image Zoom Modal - shared by both the desktop and mobile
+                layouts above (they toggle via `hidden`/`lg:hidden`, which
+                would otherwise hide this too if it stayed nested inside
+                either one). */}
+            {zoomedImage && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+                onClick={() => setZoomedImage(null)}
+              >
+                <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center">
+                  <button
+                    className="absolute -top-10 right-0 text-white hover:text-gray-300"
+                    onClick={() => setZoomedImage(null)}
+                  >
+                    <span className="text-2xl">&times;</span> Close
+                  </button>
+                  <img
+                    src={zoomedImage}
+                    alt="Zoomed View"
+                    className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-white"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -2241,54 +2328,95 @@ startxref
 
 
   return (
-    <div className={`h-screen w-screen bg-background flex flex-col overflow-hidden min-h-0 ${isResizing ? 'cursor-col-resize' : ''}`}>
-      <div className="flex items-center gap-2 sm:gap-4 py-3 sm:py-4 px-3 sm:px-6 bg-card border-b border-border flex-shrink-0">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span className="text-sm font-medium hidden sm:inline">Back</span>
-        </button>
-        <div className="h-4 w-px bg-border"></div>
-        <h1 className="text-base sm:text-lg font-bold text-foreground truncate">
-          {activeTab === "upload" ? "Upload Documents" :
-            activeTab === "learning" ? "Learning Hub" :
-              activeTab === "assessment" ? "Assessment" :
-                "AI Tutor"}
-        </h1>
+    <div className={`h-screen w-screen bg-[#FAFAFC] flex flex-col overflow-hidden min-h-0 ${isResizing ? 'cursor-col-resize' : ''}`}>
+      {/* Top Header Bar (Desktop Only) */}
+      <div className="hidden lg:flex items-center justify-between py-2.5 px-4 sm:px-6 bg-white border-b border-slate-200/80 flex-shrink-0 z-10 select-none">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="hidden sm:inline">Back</span>
+          </button>
+          <div className="h-4 w-px bg-slate-200"></div>
+          <h1 className="text-sm font-bold text-slate-800 truncate">
+            {activeTab === "upload" ? "Upload Documents" :
+              activeTab === "learning" ? "Learning Hub" :
+                activeTab === "assessment" ? "Assessment" :
+                  "AI Tutor"}
+          </h1>
+        </div>
 
-        {/* Backend Connection Status */}
-        <div className="flex items-center gap-2 ml-auto">
+        {/* Center Search Input */}
+        <div className="hidden md:flex items-center gap-2 max-w-md w-full mx-4">
+          <div className="relative w-full">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <input
+              type="text"
+              placeholder="Ask anything about this topic..."
+              className="w-full pl-9 pr-12 py-1.5 bg-slate-50 border border-slate-200/80 rounded-full text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+            />
+            <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-[10px] font-semibold text-slate-400">
+              Ctrl K
+            </span>
+          </div>
+        </div>
+
+        {/* Right Status & Profile */}
+        <div className="flex items-center gap-4">
           {backendConnected === null && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-              <span className="text-xs hidden sm:inline">Connecting...</span>
+            <div className="flex items-center gap-1.5 text-slate-400">
+              <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+              <span className="text-xs font-medium hidden sm:inline">Connecting...</span>
             </div>
           )}
           {backendConnected === true && (
-            <div className="flex items-center gap-2 text-green-600">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-xs hidden sm:inline">Connected</span>
+            <div className="flex items-center gap-1.5 text-emerald-600">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+              <span className="text-xs font-semibold hidden sm:inline">Connected</span>
             </div>
           )}
           {backendConnected === false && (
-            <div className="flex items-center gap-2 text-destructive">
-              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              <span className="text-xs hidden sm:inline">Disconnected</span>
+            <div className="flex items-center gap-1.5 text-rose-500">
+              <div className="w-2 h-2 bg-rose-500 rounded-full"></div>
+              <span className="text-xs font-medium hidden sm:inline">Disconnected</span>
             </div>
           )}
+
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+            A
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 pb-16 lg:pb-0 relative">
         {activeTab === "upload" && <UploadTab />}
         {activeTab === "learning" && <LearningTab files={files} />}
         {activeTab === "assessment" && <AssessmentTab handleTabChange={handleTabChange} navigate={navigate} />}
         {activeTab === "tutor" && <TutorTab handleTabChange={handleTabChange} navigate={navigate} />}
       </div>
+
+      {/* Global Mobile Bottom Dock Navigation Bar (< lg) */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        handleTabChange={handleTabChange}
+        navigate={navigate}
+        onOpenTutorSheet={() => setIsMobileTutorSheetOpen(true)}
+      />
+
+      {/* Global Mobile AI Tutor Bottom Sheet Modal */}
+      <MobileTutorSheet
+        isOpen={isMobileTutorSheetOpen}
+        onClose={() => setIsMobileTutorSheetOpen(false)}
+        fileName={localStorage.getItem("neurolearn_tutor_file_name")}
+      />
     </div>
   );
 }

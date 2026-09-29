@@ -68,6 +68,18 @@ export interface ReferenceLink {
   description?: string;
 }
 
+export interface TutorChatResponse {
+  response: string;
+  citations?: string[];
+  section?: string;
+}
+
+export interface TutorVoiceResponse {
+  transcript: string;
+  response: string;
+  translated?: string | null;
+}
+
 // ---------------- AI Tutor types (see LearnBack's tutor build plan) ----------------
 // Every /api/tutor/* call needs an auth header - either a Clerk Bearer
 // token or an X-Anonymous-Id (see client/lib/identity.ts's
@@ -136,6 +148,20 @@ export function isDiagnosticDone(res: DiagnosticStepResponse): res is Diagnostic
 export type MasteryBand = 'teach' | 'practice' | 'apply' | 'review';
 export type DeliveryMode = 'worked_example' | 'socratic' | 'direct_explanation' | 'review';
 
+/**
+ * Mirrors planner.py's mastery_band() thresholds - display-only (which
+ * color/label bucket a mastery % falls into right after a checkpoint
+ * update, before the next full plan/lesson fetch confirms it). The
+ * backend's own band value in the next API response is always the source
+ * of truth; this just avoids a stale-looking sidebar for a few seconds.
+ */
+export function masteryBandClient(score: number): MasteryBand {
+  if (score < 0.6) return 'teach';
+  if (score < 0.75) return 'practice';
+  if (score < 0.9) return 'apply';
+  return 'review';
+}
+
 export interface StudyPlanStep {
   topic_id: string;
   title: string;
@@ -175,6 +201,7 @@ export interface LessonStep {
   explanation: string;
   example: string;
   checkpoint_question: string;
+  images: string[];
   step_index: number;
   total_steps: number;
 }
@@ -584,6 +611,59 @@ class ApiService {
       throw new Error(errorData.error || 'Failed to submit the checkpoint answer');
     }
     return response.json();
+  }
+
+  // ---------------- AI Tutor: "Ask Your Tutor" chat ----------------
+  // Reuses the existing Q&A/voice/TTS endpoints already built for the
+  // document summary page (Study.tsx) - not behind @require_auth, so no
+  // auth headers needed here, unlike the /api/tutor/* methods above.
+
+  async askTutorQuestion(question: string, fileName: string): Promise<TutorChatResponse> {
+    const response = await fetch(`${this.baseURL}/api/qa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, fileName }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to get an answer');
+    }
+    return response.json();
+  }
+
+  async askTutorVoice(audioBlob: Blob, fileName: string): Promise<TutorVoiceResponse> {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'voice.webm');
+    formData.append('fileName', fileName);
+    const response = await fetch(`${this.baseURL}/api/qa-voice`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to process voice input');
+    }
+    return response.json();
+  }
+
+  /**
+   * Synthesizes speech and returns a directly-playable URL. /api/qa-tts
+   * only returns a GridFS `audioId` (unlike /api/qa-voice's `audioUrl`,
+   * which is always null - that field is an unwired placeholder there) -
+   * the actual playable URL is built from the separate streaming route.
+   */
+  async synthesizeTutorSpeech(text: string, fileName?: string): Promise<string> {
+    const response = await fetch(`${this.baseURL}/api/qa-tts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, fileName }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to synthesize speech');
+    }
+    const data = await response.json();
+    return `${this.baseURL}/api/tts-audio/${data.audioId}`;
   }
 
   // Test connection

@@ -134,9 +134,20 @@
     @apply bg-background text-foreground;
   }
 
-  :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label, td, th) {
+  :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label) {
     overflow-wrap: anywhere;
     word-break: break-word;
+  }
+
+  /* Table cells get the gentler break-word, not "anywhere" - "anywhere"
+     forces mid-word breaks the instant a column is narrow (confirmed:
+     "Foundations" splitting into "Found"/"ations" in a 2-column AI-summary
+     table on mobile), when normal word-wrapping at spaces would have been
+     enough. break-word still prevents a genuinely long unbroken string
+     (a URL, say) from blowing out the layout. */
+  :where(td, th) {
+    overflow-wrap: break-word;
+    word-break: normal;
   }
 
   pre,
@@ -736,12 +747,19 @@
 }
 
 /* Hide scrollbars while maintaining scroll functionality */
-.hide-scrollbar {
-  /* For Webkit browsers (Chrome, Safari, Edge) */
+.hide-scrollbar,
+.no-scrollbar,
+::-webkit-scrollbar {
   -ms-overflow-style: none;
-  /* Internet Explorer 10+ */
   scrollbar-width: none;
-  /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar,
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 
