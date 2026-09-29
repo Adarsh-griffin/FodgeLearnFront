@@ -155,6 +155,23 @@
     overflow-x: auto;
     white-space: pre;
   }
+
+  /* iOS Safari auto-zooms the whole page when a focused input/textarea's
+     font-size is under 16px, and does NOT zoom back out after typing -
+     confirmed: the "type a topic name" field (text-sm, 14px) left the
+     user stuck zoomed in until they manually pinched back out. 16px is
+     the documented threshold that suppresses this; scoped to mobile
+     widths only so desktop's intentionally smaller input text is
+     untouched. !important is needed because Tailwind's text-sm/text-xs
+     utility classes carry higher specificity than a bare element
+     selector and must be overridden regardless of which one is used. */
+  @media (max-width: 767px) {
+    input,
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  }
 }
 
 @keyframes float {

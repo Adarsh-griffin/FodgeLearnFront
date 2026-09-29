@@ -46,8 +46,10 @@ export function Home() {
 
   // Already identified (signed in, or already chose guest before) - skip
   // the popup entirely and go straight in.
+  const isReturning = isSignedIn || hasAnonymousId();
+
   const handleGetStarted = () => {
-    if (isSignedIn || hasAnonymousId()) {
+    if (isReturning) {
       navigate("/study");
     } else {
       setShowAuthGate(true);
@@ -101,7 +103,7 @@ export function Home() {
                 onClick={handleGetStarted}
                 className="px-8 py-3.5 gradient-brand text-white rounded-xl font-semibold shadow-premium hover:opacity-95 active:scale-[0.98] transition-all"
               >
-                Get Started
+                {isReturning ? "Continue Learning" : "Get Started"}
               </button>
             </div>
           </div>
@@ -198,15 +200,19 @@ export function Home() {
       {/* Simple CTA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
         <div className="gradient-spectrum rounded-2xl px-6 sm:px-12 py-12 sm:py-16 text-center shadow-premium">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4">Ready to Start Learning?</h2>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4">
+            {isReturning ? "Ready to keep learning?" : "Ready to Start Learning?"}
+          </h2>
           <p className="text-base sm:text-lg text-white/85 mb-8 max-w-2xl mx-auto">
-            Join our platform and begin your journey to mastering new skills and knowledge.
+            {isReturning
+              ? "Pick up right where you left off."
+              : "Join our platform and begin your journey to mastering new skills and knowledge."}
           </p>
           <button
             onClick={handleGetStarted}
             className="inline-block px-8 py-3.5 bg-white text-primary rounded-xl font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
           >
-            Get Started
+            {isReturning ? "Continue Learning" : "Get Started"}
           </button>
         </div>
       </section>

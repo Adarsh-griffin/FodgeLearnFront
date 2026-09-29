@@ -12,6 +12,7 @@ import { TutorAssistantPanel } from "./TutorAssistantPanel";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { MobileTutorSheet } from "./MobileTutorSheet";
 import { MobileNavDrawer } from "./MobileNavDrawer";
+import { TutorLoadingScreen } from "./TutorLoadingScreen";
 
 type Stage = "loading" | "select_file" | "onboarding" | "diagnostic" | "generating_plan" | "roadmap" | "lesson" | "complete";
 
@@ -153,11 +154,7 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
   const handleAllDone = () => setStage("complete");
 
   if (stage === "loading" || !isLoaded) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-[#FAFAFC]">
-        <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <TutorLoadingScreen message="Loading your AI Tutor" />;
   }
 
   if (stage === "select_file") {
@@ -264,10 +261,14 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
           )}
 
           {stage === "generating_plan" && (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3">
-              <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm font-medium text-slate-600">Building your personalized learning roadmap...</p>
-            </div>
+            <TutorLoadingScreen
+              message="Building your personalized roadmap"
+              subMessages={[
+                "Reviewing your diagnostic results...",
+                "Sequencing topics by mastery...",
+                "Almost ready...",
+              ]}
+            />
           )}
 
           {stage === "roadmap" && plan && <RoadmapView plan={plan} onStart={handleStartLearning} />}

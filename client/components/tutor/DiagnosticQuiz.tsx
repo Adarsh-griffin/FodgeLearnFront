@@ -7,6 +7,7 @@ import {
   DiagnosticResult,
   isDiagnosticDone,
 } from "@/lib/api";
+import { TutorLoadingScreen } from "./TutorLoadingScreen";
 
 interface DiagnosticQuizProps {
   fileId: string;
@@ -108,9 +109,10 @@ export function DiagnosticQuiz({ fileId, goal, getAuthHeaders, onComplete }: Dia
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
+      <TutorLoadingScreen
+        message="Preparing your diagnostic"
+        subMessages={["Analyzing document topics...", "Choosing the right starting point..."]}
+      />
     );
   }
 

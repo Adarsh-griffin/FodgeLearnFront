@@ -4,7 +4,8 @@ import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
-import { 
+import { TutorLoadingScreen } from "./TutorLoadingScreen";
+import {
   CheckCircle2, 
   XCircle, 
   Lightbulb, 
@@ -182,10 +183,14 @@ export function LessonView({
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-[#FAFAFC]">
-        <div className="w-9 h-9 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-slate-500 font-medium">Preparing interactive visual lesson...</p>
-      </div>
+      <TutorLoadingScreen
+        message="Preparing your interactive lesson"
+        subMessages={[
+          "Reviewing your mastery on this topic...",
+          "Structuring key concepts...",
+          "Adding worked examples & visuals...",
+        ]}
+      />
     );
   }
 
