@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap } from "lucide-react";
+import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap, HelpCircle, BarChart3, ArrowRight, Lightbulb } from "lucide-react";
 import { TutorTab } from "@/components/tutor/TutorTab";
 import { MobileUploadView } from "@/components/tutor/MobileUploadView";
 import { MobileBottomNav } from "@/components/tutor/MobileBottomNav";
@@ -196,62 +196,158 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
 
             {/* Welcome State */}
             {currentState === 'welcome' && (
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <div className="text-center">
-                  <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <FileText size={40} className="text-indigo-600" />
-                  </div>
-                  <h2 className="text-3xl font-bold text-gray-800 mb-4">Ready for Assessment?</h2>
-                  <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-                    Test your understanding with AI-generated questions based on your latest uploaded document.
-                    Get personalized feedback and improve your learning.
-                  </p>
-
-                  <div className="space-y-4">
-                    <div className="flex gap-4 max-w-2xl mx-auto">
-                      <button
-                        onClick={() => generateQuestion('theoretical')}
-                        disabled={generatingType !== null}
-                        className="flex-1 px-6 py-4 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      >
-                        {generatingType === 'theoretical' ? (
-                          <>
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <FileText size={20} />
-                            Generate Theoretical Question
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        onClick={() => generateQuestion('mcq')}
-                        disabled={generatingType !== null}
-                        className="flex-1 px-6 py-4 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      >
-                        {generatingType === 'mcq' ? (
-                          <>
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle size={20} />
-                            Generate MCQ
-                          </>
-                        )}
-                      </button>
+              <>
+                {/* Desktop welcome card */}
+                <div className="hidden lg:block bg-white rounded-xl shadow-lg p-8">
+                  <div className="text-center">
+                    <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <FileText size={40} className="text-indigo-600" />
                     </div>
-
-                    <p className="text-sm text-gray-500">
-                      Questions are generated from your most recently uploaded document
+                    <h2 className="text-3xl font-bold text-gray-800 mb-4">Ready for Assessment?</h2>
+                    <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+                      Test your understanding with AI-generated questions based on your latest uploaded document.
+                      Get personalized feedback and improve your learning.
                     </p>
+
+                    <div className="space-y-4">
+                      <div className="flex gap-4 max-w-2xl mx-auto">
+                        <button
+                          onClick={() => generateQuestion('theoretical')}
+                          disabled={generatingType !== null}
+                          className="flex-1 px-6 py-4 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {generatingType === 'theoretical' ? (
+                            <>
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <FileText size={20} />
+                              Generate Theoretical Question
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          onClick={() => generateQuestion('mcq')}
+                          disabled={generatingType !== null}
+                          className="flex-1 px-6 py-4 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {generatingType === 'mcq' ? (
+                            <>
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle size={20} />
+                              Generate MCQ
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      <p className="text-sm text-gray-500">
+                        Questions are generated from your most recently uploaded document
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+
+                {/* Mobile welcome screen */}
+                <div className="lg:hidden">
+                  {/* Decorative header illustration */}
+                  <div className="relative h-48 flex items-center justify-center mb-6 select-none">
+                    <div className="absolute w-40 h-40 rounded-full bg-gradient-to-br from-indigo-200/70 via-purple-200/60 to-pink-100/50 blur-xl" />
+                    <div className="absolute top-2 left-6 grid grid-cols-3 gap-1 opacity-40">
+                      {Array.from({ length: 9 }).map((_, i) => (
+                        <span key={i} className="w-1 h-1 rounded-full bg-indigo-400" />
+                      ))}
+                    </div>
+                    <Sparkles className="absolute top-4 right-10 w-4 h-4 text-indigo-400" />
+                    <Sparkles className="absolute bottom-6 left-10 w-3 h-3 text-purple-400" />
+
+                    <div className="relative w-24 h-28 bg-white rounded-2xl shadow-lg border border-slate-100 flex flex-col items-center justify-center gap-2 p-3 rotate-[-4deg]">
+                      <CheckCircle className="w-6 h-6 text-indigo-500 flex-shrink-0" />
+                      <div className="w-full space-y-1.5">
+                        <div className="h-1.5 bg-slate-200 rounded-full w-full" />
+                        <div className="h-1.5 bg-slate-200 rounded-full w-4/5" />
+                        <div className="h-1.5 bg-slate-200 rounded-full w-full" />
+                      </div>
+                    </div>
+
+                    <div className="absolute bottom-4 left-8 w-11 h-11 rounded-2xl bg-indigo-600 shadow-lg flex items-center justify-center rotate-[-8deg]">
+                      <HelpCircle className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="absolute top-6 right-6 w-11 h-11 rounded-2xl bg-rose-400 shadow-lg flex items-center justify-center rotate-[8deg]">
+                      <BarChart3 className="w-5 h-5 text-white" />
+                    </div>
+                  </div>
+
+                  <h2 className="text-2xl font-extrabold text-center text-slate-900 tracking-tight">
+                    Ready for{" "}
+                    <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                      Assessment?
+                    </span>
+                  </h2>
+                  <p className="text-sm text-slate-500 text-center leading-relaxed mt-3 mb-7 px-2">
+                    Test your understanding with AI-generated questions based on your latest uploaded document. Get
+                    personalized feedback and improve your learning.
+                  </p>
+
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => generateQuestion('theoretical')}
+                      disabled={generatingType !== null}
+                      className="w-full flex items-center gap-3.5 p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-left disabled:opacity-60 transition-colors hover:bg-indigo-50"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white text-indigo-600 flex items-center justify-center shadow-xs flex-shrink-0">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-900 text-sm">Generate Theoretical Question</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Get concept-based questions to test your understanding.</p>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center flex-shrink-0">
+                        {generatingType === 'theoretical' ? (
+                          <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <ArrowRight className="w-4 h-4 text-indigo-600" />
+                        )}
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => generateQuestion('mcq')}
+                      disabled={generatingType !== null}
+                      className="w-full flex items-center gap-3.5 p-4 rounded-2xl bg-purple-50/70 border border-purple-100 text-left disabled:opacity-60 transition-colors hover:bg-purple-50"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white text-purple-600 flex items-center justify-center shadow-xs flex-shrink-0">
+                        <CheckCircle className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-900 text-sm">Generate MCQ</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Get multiple choice questions from your uploaded document.</p>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center flex-shrink-0">
+                        {generatingType === 'mcq' ? (
+                          <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <ArrowRight className="w-4 h-4 text-purple-600" />
+                        )}
+                      </div>
+                    </button>
+
+                    <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-amber-50 border border-amber-100">
+                      <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                      <p className="text-xs text-amber-800 font-medium">
+                        Questions are generated from your most recently uploaded document.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Assessment Tab */}
@@ -960,9 +1056,7 @@ startxref
           handleFileSelect={handleFileSelect}
           handleTopicNameSubmit={handleTopicNameSubmit}
           isSubmittingTopic={isSubmittingTopic}
-          activeTab={activeTab}
           handleTabChange={handleTabChange}
-          navigate={navigate}
           files={files}
           uploadProgress={uploadProgress}
           processingStatus={processingStatus}

@@ -1,11 +1,7 @@
 import { useRef, useState } from "react";
-import { 
-  Home, 
-  GraduationCap, 
-  BookOpen, 
-  Upload, 
-  FileText, 
-  Sparkles, 
+import {
+  Upload,
+  Sparkles,
   CheckCircle,
   Check
 } from "lucide-react";
@@ -19,9 +15,7 @@ interface MobileUploadViewProps {
   handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleTopicNameSubmit: (topicName: string) => void;
   isSubmittingTopic: boolean;
-  activeTab: "upload" | "learning" | "assessment" | "tutor";
   handleTabChange: (tab: "upload" | "learning" | "assessment" | "tutor") => void;
-  navigate: (path: string | number) => void;
   files: File[];
   uploadProgress: Record<string, number>;
   processingStatus: Record<string, any>;
@@ -38,9 +32,7 @@ export function MobileUploadView({
   handleFileSelect,
   handleTopicNameSubmit,
   isSubmittingTopic,
-  activeTab,
   handleTabChange,
-  navigate,
   files,
   uploadProgress,
   successMessages,
@@ -56,60 +48,43 @@ export function MobileUploadView({
 
   const isTopicButtonDisabled = !topicInput.trim() || isSubmittingTopic;
 
+  // Blocks the screen with a translucent processing state until the FIRST
+  // file/topic finishes - once anything is ready, this clears so the
+  // sticky "Continue" bar below takes over instead of a modal.
+  const isProcessing = files.length > 0 && !files.some((f) => successMessages[f.name]);
+  const hasCompletedFile = files.some((f) => successMessages[f.name]);
+
   return (
-    <div className="flex-1 flex min-h-0 bg-[#FAFAFC] overflow-hidden select-none w-full">
-      {/* 1. Mobile Navigation Rail (~52-56px wide with larger, touch-friendly 24px icons) */}
-      <aside className="w-13 sm:w-16 bg-white border-r border-slate-200/80 flex flex-col items-center py-5 gap-5 flex-shrink-0 z-10 shadow-2xs">
-        <button
-          onClick={() => navigate("/")}
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
-          title="Home"
-        >
-          <Home className="w-6 h-6" />
-        </button>
+    <div className="flex-1 flex min-h-0 bg-[#FAFAFC] overflow-hidden select-none w-full relative">
+      {/* Translucent Processing Overlay - shown from the moment a file/topic
+          is submitted until the first one completes, so the user isn't
+          staring at an unchanged form wondering if anything happened. */}
+      {isProcessing && (
+        <div className="fixed inset-0 z-30 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4 px-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg">
+            <div className="w-8 h-8 border-[3px] border-white border-t-transparent rounded-full animate-spin" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-base font-bold text-slate-900">Preparing your learning module...</p>
+            <p className="text-sm text-slate-500">Analyzing content and building your AI Tutor session.</p>
+          </div>
+        </div>
+      )}
 
-        <button
-          onClick={() => handleTabChange("tutor")}
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-            activeTab === "tutor" ? "bg-indigo-50 text-indigo-600 font-semibold shadow-2xs" : "text-slate-400 hover:text-slate-700"
-          }`}
-          title="AI Tutor"
-        >
-          <GraduationCap className="w-6 h-6" />
-        </button>
+      {/* Sticky Continue Bar - fixed above the bottom nav so it's visible
+          the instant something's ready, with no scrolling required. */}
+      {hasCompletedFile && (
+        <div className="fixed bottom-20 inset-x-4 z-30">
+          <button
+            onClick={() => handleTabChange("tutor")}
+            className="w-full py-3.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg hover:bg-emerald-700 transition-colors"
+          >
+            Continue to AI Tutor
+          </button>
+        </div>
+      )}
 
-        <button
-          onClick={() => handleTabChange("learning")}
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-            activeTab === "learning" ? "bg-indigo-50 text-indigo-600 font-semibold shadow-2xs" : "text-slate-400 hover:text-slate-700"
-          }`}
-          title="My Learning"
-        >
-          <BookOpen className="w-6 h-6" />
-        </button>
-
-        <button
-          onClick={() => handleTabChange("upload")}
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-            activeTab === "upload" ? "bg-indigo-50 text-indigo-600 font-semibold shadow-2xs" : "text-slate-400 hover:text-slate-700"
-          }`}
-          title="Upload"
-        >
-          <Upload className="w-6 h-6" />
-        </button>
-
-        <button
-          onClick={() => handleTabChange("assessment")}
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-            activeTab === "assessment" ? "bg-indigo-50 text-indigo-600 font-semibold shadow-2xs" : "text-slate-400 hover:text-slate-700"
-          }`}
-          title="Assessments"
-        >
-          <FileText className="w-6 h-6" />
-        </button>
-      </aside>
-
-      {/* 2. Main Content View with optimal edge padding & vertical fill */}
+      {/* Main Content View with optimal edge padding & vertical fill */}
       <main className="flex-1 min-h-0 overflow-y-auto hide-scrollbar bg-[#FAFAFC] px-3.5 sm:px-6 py-6 space-y-7 pb-28">
         
         {/* Dominant Upload Dropzone */}
@@ -274,15 +249,6 @@ export function MobileUploadView({
                 );
               })}
             </div>
-
-            {files.some((f) => successMessages[f.name]) && (
-              <button
-                onClick={() => handleTabChange("tutor")}
-                className="w-full py-3.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md hover:bg-emerald-700 transition-colors"
-              >
-                Continue to AI Tutor
-              </button>
-            )}
           </div>
         )}
       </main>

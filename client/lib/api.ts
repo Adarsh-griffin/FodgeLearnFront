@@ -188,6 +188,14 @@ export interface StudyPlan {
   generated_at: string;
 }
 
+/** What /api/tutor/progress says to resume to for (this user, this file). */
+export interface TutorProgress {
+  stage: "onboarding" | "roadmap" | "lesson";
+  goal?: string;
+  availableMinutes?: number;
+  studyPlan?: StudyPlan;
+}
+
 /** One lesson to work through - always has done:false. */
 export interface LessonStep {
   done: false;
@@ -531,6 +539,23 @@ class ApiService {
   // ---------------- AI Tutor ----------------
   // Every method below takes `authHeaders` last - build it once per call
   // site with getTutorAuthHeaders() from client/lib/identity.ts.
+
+  /**
+   * Lets TutorTab resume wherever this student left off for this document
+   * (roadmap or an in-progress lesson) instead of always restarting at
+   * onboarding when the tab remounts - see test_groq.py's /api/tutor/progress
+   * for what's actually persisted and why a mid-diagnostic isn't resumed.
+   */
+  async getTutorProgress(fileId: string, authHeaders: Record<string, string>): Promise<TutorProgress> {
+    const response = await fetch(`${this.baseURL}/api/tutor/progress?fileId=${encodeURIComponent(fileId)}`, {
+      headers: authHeaders,
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to fetch tutor progress');
+    }
+    return response.json();
+  }
 
   async getTutorTopics(fileId: string, authHeaders: Record<string, string>): Promise<TutorTopicGraph> {
     const response = await fetch(`${this.baseURL}/api/tutor/topics?fileId=${encodeURIComponent(fileId)}`, {

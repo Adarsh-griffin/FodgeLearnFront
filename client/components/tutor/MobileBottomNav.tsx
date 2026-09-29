@@ -27,13 +27,15 @@ export function MobileBottomNav({
           <span>Home</span>
         </button>
 
-        {/* Learn - the Learning Hub/Summary page. Reverted: it briefly
-            pointed at AI Tutor, but AI Tutor must only open from the
-            elevated center button. */}
+        {/* Learn - opens the actual AI Tutor lesson page (the tutor tab
+            itself), same tab as the elevated center button, but WITHOUT
+            popping the chat sheet - that sheet is a separate quick-ask
+            overlay that only the center button should open. Distinct from
+            "Summary" below (the Learning Hub / video+summary page). */}
         <button
-          onClick={() => handleTabChange("learning")}
+          onClick={() => handleTabChange("tutor")}
           className={`flex flex-col items-center gap-0.5 text-[11px] font-semibold transition-colors ${
-            activeTab === "learning" ? "text-indigo-600 font-extrabold" : "text-slate-500 hover:text-indigo-600"
+            activeTab === "tutor" ? "text-indigo-600 font-extrabold" : "text-slate-500 hover:text-indigo-600"
           }`}
         >
           <BookOpen className="w-5 h-5" />
@@ -59,9 +61,9 @@ export function MobileBottomNav({
           </span>
         </div>
 
-        {/* Summary - was "Library" pointing at the Upload tab; renamed and
-            repointed to the Learning Hub/Summary page since "Learn" above
-            now goes to the AI Tutor instead. */}
+        {/* Summary - the Learning Hub page (video explanation + AI summary
+            + reference links). Was "Library", pointing at the Upload tab;
+            renamed and repointed here since that's what the label means. */}
         <button
           onClick={() => handleTabChange("learning")}
           className={`flex flex-col items-center gap-0.5 text-[11px] font-semibold transition-colors ${

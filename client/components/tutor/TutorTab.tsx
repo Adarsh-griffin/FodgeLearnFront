@@ -51,6 +51,28 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
     [isSignedIn, getToken],
   );
 
+  // Resumes exactly where this student left off for this document (an
+  // already-generated roadmap or an in-progress lesson) instead of always
+  // restarting at onboarding - TutorTab unmounts every time the user
+  // switches to another tab, which used to wipe this progress from local
+  // state even though it was already saved server-side in student_profiles
+  // all along (every diagnostic answer, plan, and lesson checkpoint is
+  // persisted there). See test_groq.py's /api/tutor/progress.
+  const resumeProgress = async (fileId: string) => {
+    setStage("loading");
+    try {
+      const headers = await getAuthHeaders();
+      const progress = await apiService.getTutorProgress(fileId, headers);
+      if (progress.goal) setGoal(progress.goal);
+      if (progress.availableMinutes) setAvailableMinutes(progress.availableMinutes);
+      if (progress.studyPlan) setPlan(progress.studyPlan);
+      setStage(progress.stage);
+    } catch (err) {
+      console.error("Failed to resume tutor progress:", err);
+      setStage("onboarding");
+    }
+  };
+
   useEffect(() => {
     if (!isLoaded) return;
     let cancelled = false;
@@ -65,7 +87,7 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
         if (stillExists) {
           setSelectedFileId(cachedId);
           setSelectedFileName(cachedName);
-          setStage("onboarding");
+          resumeProgress(cachedId);
         } else {
           setStage("select_file");
         }
@@ -86,7 +108,7 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
     localStorage.setItem(FILE_NAME_KEY, file.originalName);
     setSelectedFileId(file._id);
     setSelectedFileName(file.originalName);
-    setStage("onboarding");
+    resumeProgress(file._id);
   };
 
   const handleChangeDocument = () => {
