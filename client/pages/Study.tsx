@@ -837,6 +837,16 @@ startxref
           localStorage.removeItem('neurolearn_available_files');
           localStorage.removeItem('neurolearn_files_timestamp');
 
+          // Point the AI Tutor tab at THIS document (overwrites its cached
+          // selection) - otherwise TutorTab restores whatever was last
+          // studied and silently ignores that a new file was just uploaded,
+          // e.g. typing a fresh topic name then getting quizzed on an
+          // unrelated PDF from a previous session.
+          if (response.fileId) {
+            localStorage.setItem('neurolearn_tutor_file_id', response.fileId);
+            localStorage.setItem('neurolearn_tutor_file_name', file.name);
+          }
+
           // Start polling for processing status
           if (response.filename) {
             setProcessingStatus(prev => ({
