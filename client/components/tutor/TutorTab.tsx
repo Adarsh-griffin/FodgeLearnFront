@@ -96,25 +96,42 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
     setStage("select_file");
   };
 
-  const handleOnboardingComplete = (chosenGoal: string, minutes: number) => {
-    setGoal(chosenGoal);
-    setAvailableMinutes(minutes);
-    setStage("diagnostic");
-  };
-
-  const handleDiagnosticComplete = async (_result: DiagnosticResult) => {
+  // Shared by both entry points into plan generation: after a completed
+  // diagnostic, or directly from onboarding for "Learn from scratch" (see
+  // below - there's nothing to diagnose yet, so skipping straight here
+  // with no profile/mastery is correct: plan/generate already treats a
+  // missing mastery entry as 0%, i.e. "teach everything from zero").
+  const generatePlan = async (goalForPlan: string, minutesForPlan: number) => {
     if (!selectedFileId) return;
     setStage("generating_plan");
     setPlanError(null);
     try {
       const headers = await getAuthHeaders();
-      const generatedPlan = await apiService.generateStudyPlan(selectedFileId, availableMinutes, goal, headers);
+      const generatedPlan = await apiService.generateStudyPlan(selectedFileId, minutesForPlan, goalForPlan, headers);
       setPlan(generatedPlan);
       setStage("roadmap");
     } catch (err) {
       setPlanError(err instanceof Error ? err.message : "Failed to generate your study plan");
       setStage("roadmap");
     }
+  };
+
+  const handleOnboardingComplete = (chosenGoal: string, minutes: number) => {
+    setGoal(chosenGoal);
+    setAvailableMinutes(minutes);
+    if (chosenGoal === "Learn from scratch") {
+      // A student who picked this has nothing to be quizzed on yet -
+      // asking diagnostic questions before any teaching has happened
+      // doesn't make sense for them. Skip straight to the content/roadmap
+      // path instead of the question-based diagnostic.
+      generatePlan(chosenGoal, minutes);
+    } else {
+      setStage("diagnostic");
+    }
+  };
+
+  const handleDiagnosticComplete = async (_result: DiagnosticResult) => {
+    await generatePlan(goal, availableMinutes);
   };
 
   const handleStartLearning = () => setStage("lesson");
