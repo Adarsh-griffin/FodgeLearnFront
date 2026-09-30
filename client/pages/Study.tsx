@@ -1300,10 +1300,13 @@ startxref
     const [linksLoading, setLinksLoading] = useState(false);
     const [summaryText, setSummaryText] = useState<string>('');
     const [summaryImages, setSummaryImages] = useState<string[]>([]);
+    const [summaryStatus, setSummaryStatus] = useState<string>('completed');
     const [textLoading, setTextLoading] = useState(false);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [videoLoading, setVideoLoading] = useState(false);
     const [videoError, setVideoError] = useState<string | null>(null);
+    const [summaryAudioState, setSummaryAudioState] = useState<'idle' | 'loading' | 'playing'>('idle');
+    const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
     const summaryHashValue = summaryText && summaryText.trim().length > 0
       ? `${summaryText.length}-${summaryText.slice(0, 64)}`
       : undefined;
@@ -1344,102 +1347,100 @@ startxref
     // Chat scroll ref
     const chatScrollRef = useRef<HTMLDivElement>(null);
 
-    // Load reference links when component mounts
-    useEffect(() => {
-      const loadLinks = async () => {
-        // Check localStorage first
-        const cachedLinks = localStorage.getItem('neurolearn_reference_links');
-        const cacheTimestamp = localStorage.getItem('neurolearn_links_timestamp');
-        const now = Date.now();
-        const cacheAge = cacheTimestamp ? now - parseInt(cacheTimestamp) : Infinity;
-        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+    // Both keyed by fileName - this used to be a single global cache/fetch
+    // with no file awareness at all, so switching documents in the selector
+    // below never changed what summary/links showed (confirmed: always the
+    // most recently uploaded document, regardless of selection - and a
+    // freshly-selected document with no summary yet just looked broken
+    // instead of "still processing").
+    const loadLinksForFile = async (fileName: string) => {
+      const cacheKey = `neurolearn_reference_links_${fileName}`;
+      const cacheTimestampKey = `neurolearn_links_timestamp_${fileName}`;
+      const cachedLinks = localStorage.getItem(cacheKey);
+      const cacheTimestamp = localStorage.getItem(cacheTimestampKey);
+      const now = Date.now();
+      const cacheAge = cacheTimestamp ? now - parseInt(cacheTimestamp) : Infinity;
+      const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-        if (cachedLinks && cacheAge < CACHE_DURATION) {
-          try {
-            const links = JSON.parse(cachedLinks);
-            setReferenceLinks(links);
-            return;
-          } catch (error) {
-            console.error('Failed to parse cached links:', error);
-          }
-        }
-
-        setLinksLoading(true);
+      if (cachedLinks && cacheAge < CACHE_DURATION) {
         try {
-          const links = await apiService.getLinks();
-          setReferenceLinks(links);
-
-          // Cache the links
-          localStorage.setItem('neurolearn_reference_links', JSON.stringify(links));
-          localStorage.setItem('neurolearn_links_timestamp', now.toString());
-        } catch (error) {
-          console.error('Failed to load reference links:', error);
-          setReferenceLinks([]);
-        } finally {
-          setLinksLoading(false);
-        }
-      };
-
-      loadLinks();
-    }, []);
-
-    // Load summary text when component mounts
-    useEffect(() => {
-      const loadSummaryText = async () => {
-        // Check localStorage first
-        const cachedText = localStorage.getItem('neurolearn_summary_text');
-        const cachedImages = localStorage.getItem('neurolearn_summary_images');
-        const cacheTimestamp = localStorage.getItem('neurolearn_text_timestamp');
-        const now = Date.now();
-        const cacheAge = cacheTimestamp ? now - parseInt(cacheTimestamp) : Infinity;
-        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-        if (cachedText && cacheAge < CACHE_DURATION) {
-          setSummaryText(cachedText);
-          if (cachedImages) {
-            try {
-              setSummaryImages(JSON.parse(cachedImages));
-            } catch (e) {
-              console.error('Failed to parse cached images:', e);
-            }
-          }
+          setReferenceLinks(JSON.parse(cachedLinks));
           return;
-        }
-
-        setTextLoading(true);
-        try {
-          const { text, images, fileName } = await apiService.getText();
-          setSummaryText(text);
-
-          // Construct direct S3 URLs if fileName is available
-          let finalImages = images;
-          if (fileName) {
-            const cleanName = fileName.replace(/\.[^/.]+$/, ""); // Remove extension
-            const bucketUrl = "https://adarsh-demo-neurolearn.s3.ap-southeast-2.amazonaws.com/learning-images";
-            // Generate 4 predicted URLs
-            const constructedUrls = [1, 2, 3, 4].map(i =>
-              `${bucketUrl}/${cleanName}/${cleanName}-learning-image-${i}.png`
-            );
-            finalImages = constructedUrls;
-          }
-
-          setSummaryImages(finalImages);
-
-          // Cache the text
-          localStorage.setItem('neurolearn_summary_text', text);
-          localStorage.setItem('neurolearn_summary_images', JSON.stringify(finalImages));
-          localStorage.setItem('neurolearn_text_timestamp', now.toString());
         } catch (error) {
-          console.error('Failed to load summary text:', error);
-          setSummaryText('');
-          setSummaryImages([]);
-        } finally {
-          setTextLoading(false);
+          console.error('Failed to parse cached links:', error);
         }
-      };
+      }
 
-      loadSummaryText();
-    }, []);
+      setLinksLoading(true);
+      try {
+        const links = await apiService.getLinks(fileName);
+        setReferenceLinks(links);
+        localStorage.setItem(cacheKey, JSON.stringify(links));
+        localStorage.setItem(cacheTimestampKey, now.toString());
+      } catch (error) {
+        console.error('Failed to load reference links:', error);
+        setReferenceLinks([]);
+      } finally {
+        setLinksLoading(false);
+      }
+    };
+
+    const loadSummaryForFile = async (fileName: string) => {
+      const textCacheKey = `neurolearn_summary_text_${fileName}`;
+      const imagesCacheKey = `neurolearn_summary_images_${fileName}`;
+      const timestampKey = `neurolearn_text_timestamp_${fileName}`;
+      const cachedText = localStorage.getItem(textCacheKey);
+      const cachedImages = localStorage.getItem(imagesCacheKey);
+      const cacheTimestamp = localStorage.getItem(timestampKey);
+      const now = Date.now();
+      const cacheAge = cacheTimestamp ? now - parseInt(cacheTimestamp) : Infinity;
+      const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+      if (cachedText && cacheAge < CACHE_DURATION) {
+        setSummaryText(cachedText);
+        setSummaryStatus('completed');
+        if (cachedImages) {
+          try {
+            setSummaryImages(JSON.parse(cachedImages));
+          } catch (e) {
+            console.error('Failed to parse cached images:', e);
+          }
+        }
+        return;
+      }
+
+      setTextLoading(true);
+      try {
+        const { text, images, status } = await apiService.getText(fileName);
+        setSummaryText(text);
+        setSummaryImages(images);
+        setSummaryStatus(status);
+
+        // Only cache a genuinely finished summary - caching "processing"
+        // would freeze the UI on that message for 5 minutes even after the
+        // real summary finishes generating in the background.
+        if (status === 'completed') {
+          localStorage.setItem(textCacheKey, text);
+          localStorage.setItem(imagesCacheKey, JSON.stringify(images));
+          localStorage.setItem(timestampKey, now.toString());
+        }
+      } catch (error) {
+        console.error('Failed to load summary text:', error);
+        setSummaryText('');
+        setSummaryImages([]);
+        setSummaryStatus('not_found');
+      } finally {
+        setTextLoading(false);
+      }
+    };
+
+    // Load reference links + summary whenever the selected document changes
+    useEffect(() => {
+      if (!selectedFile) return;
+      loadLinksForFile(selectedFile);
+      loadSummaryForFile(selectedFile);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedFile]);
 
     // Load available files for Q&A
     useEffect(() => {
@@ -1788,14 +1789,23 @@ startxref
         );
       }
       if (!summaryText) {
+        const isProcessing = summaryStatus === 'processing';
         return (
           <div className="bg-white rounded-lg p-4 border">
             <div className="text-center text-gray-500">
               <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                <BookOpen size={24} className="text-gray-400" />
+                {isProcessing ? (
+                  <div className="w-5 h-5 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <BookOpen size={24} className="text-gray-400" />
+                )}
               </div>
               <h5 className="font-semibold text-gray-600 mb-2">AI Summary</h5>
-              <p className="text-sm text-gray-500">Upload a document to generate AI-powered summaries and key insights</p>
+              <p className="text-sm text-gray-500">
+                {isProcessing
+                  ? "This document is still being summarized - check back in a moment, or hit Refresh."
+                  : "Upload a document to generate AI-powered summaries and key insights"}
+              </p>
             </div>
           </div>
         );
@@ -1936,6 +1946,74 @@ startxref
       </div>
     );
 
+    // Shared by the desktop and mobile "Listen" buttons - gives the summary
+    // a real listen-instead-of-read option (previously only existed on
+    // desktop as a fire-and-forget button with no play/pause state; mobile
+    // had no audio option for the summary at all).
+    const handlePlaySummaryAudio = async () => {
+      if (summaryAudioState === 'playing') {
+        summaryAudioRef.current?.pause();
+        setSummaryAudioState('idle');
+        return;
+      }
+      if (!summaryText) {
+        alert('No summary text available. Please wait for the summary to load.');
+        return;
+      }
+      const fileName = selectedFile || availableFiles[0] || undefined;
+      if (!fileName) {
+        alert('Select or upload a document first.');
+        return;
+      }
+      setSummaryAudioState('loading');
+      try {
+        const ttsResult = await apiService.learningTTS(summaryText, fileName);
+        if (ttsResult.audioUrl) {
+          const audio = new Audio(ttsResult.audioUrl);
+          summaryAudioRef.current = audio;
+          audio.onended = () => setSummaryAudioState('idle');
+          await audio.play();
+          setSummaryAudioState('playing');
+        } else {
+          setSummaryAudioState('idle');
+        }
+        if (ttsResult.videoUrl) {
+          setVideoUrl(ttsResult.videoUrl);
+          setVideoError(null);
+        } else if (fileName) {
+          await loadLatestVideo(fileName);
+        }
+      } catch (error) {
+        console.error('Failed to generate/play summary audio:', error);
+        alert(error instanceof Error ? error.message : 'Failed to generate audio. Please try again.');
+        setSummaryAudioState('idle');
+      }
+    };
+
+    const renderListenButton = (variant: 'desktop' | 'mobile') => (
+      <button
+        onClick={handlePlaySummaryAudio}
+        disabled={!summaryText || textLoading || summaryAudioState === 'loading'}
+        className={
+          variant === 'desktop'
+            ? "text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            : "flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-600 text-white text-xs font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        }
+        title={summaryAudioState === 'playing' ? "Pause" : "Listen to summary instead of reading it"}
+      >
+        {summaryAudioState === 'loading' ? (
+          <>
+            <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            Generating...
+          </>
+        ) : summaryAudioState === 'playing' ? (
+          <>⏸ Pause</>
+        ) : (
+          <>🔊 Listen</>
+        )}
+      </button>
+    );
+
     return (
       <div className="h-full w-full flex flex-col min-h-0">
         <div className="flex-1 flex min-h-0">
@@ -2058,80 +2136,17 @@ startxref
                           AI Summary
                         </h5>
                         <div className="flex items-center gap-2">
+                          {renderListenButton('desktop')}
                           <button
-                            onClick={async () => {
-                              if (!summaryText) {
-                                alert('No summary text available. Please wait for the summary to load.');
-                                return;
-                              }
-                              try {
-                                const fileName = selectedFile || availableFiles[0] || undefined;
-                                if (!fileName) {
-                                  alert('Select or upload a document first.');
-                                  return;
-                                }
-                                const ttsResult = await apiService.learningTTS(summaryText, fileName);
-                                if (ttsResult.audioUrl) {
-                                  const audio = new Audio(ttsResult.audioUrl);
-                                  audio.play().catch(err => {
-                                    console.error('Error playing audio:', err);
-                                    alert('Failed to play audio. Please try again.');
-                                  });
-                                }
-                                if (ttsResult.videoUrl) {
-                                  setVideoUrl(ttsResult.videoUrl);
-                                  setVideoError(null);
-                                } else if (fileName) {
-                                  await loadLatestVideo(fileName);
-                                }
-
-                              } catch (error) {
-                                console.error('Failed to generate TTS:', error);
-                                alert(error instanceof Error ? error.message : 'Failed to generate audio. Please try again.');
-                              }
+                            onClick={() => {
+                              if (!selectedFile) return;
+                              localStorage.removeItem(`neurolearn_summary_text_${selectedFile}`);
+                              localStorage.removeItem(`neurolearn_summary_images_${selectedFile}`);
+                              localStorage.removeItem(`neurolearn_text_timestamp_${selectedFile}`);
+                              loadSummaryForFile(selectedFile);
                             }}
-                            disabled={!summaryText || textLoading}
-                            className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                            title="Play summary as audio"
-                          >
-                            🔊 Play Audio
-                          </button>
-                          <button
-                            onClick={async () => {
-                              setTextLoading(true);
-                              try {
-                                // Clear cache and force fresh fetch
-                                localStorage.removeItem('neurolearn_summary_text');
-                                localStorage.removeItem('neurolearn_text_timestamp');
-
-                                const { text, images, fileName } = await apiService.getText();
-                                setSummaryText(text);
-
-                                // Construct direct S3 URLs if fileName is available
-                                let finalImages = images;
-                                if (fileName) {
-                                  const cleanName = fileName.replace(/\.[^/.]+$/, "");
-                                  const bucketUrl = "https://adarsh-demo-neurolearn.s3.ap-southeast-2.amazonaws.com/learning-images";
-                                  const constructedUrls = [1, 2, 3, 4].map(i =>
-                                    `${bucketUrl}/${cleanName}/${cleanName}-learning-image-${i}.png`
-                                  );
-                                  finalImages = constructedUrls;
-                                }
-
-                                setSummaryImages(finalImages);
-
-                                // Cache the new text
-                                const now = Date.now();
-                                localStorage.setItem('neurolearn_summary_text', text);
-                                localStorage.setItem('neurolearn_summary_images', JSON.stringify(finalImages));
-                                localStorage.setItem('neurolearn_text_timestamp', now.toString());
-                              } catch (error) {
-                                console.error('Failed to refresh summary text:', error);
-                              } finally {
-                                setTextLoading(false);
-                              }
-                            }}
-                            className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                            disabled={!selectedFile || textLoading}
+                            className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors disabled:opacity-50"
                           >
                             Refresh
                           </button>
@@ -2378,10 +2393,13 @@ startxref
               </div>
 
               <div className="bg-green-50 rounded-xl p-4">
-                <h5 className="font-semibold text-gray-800 flex items-center gap-2 mb-3">
-                  <BookOpen size={20} className="text-green-600" />
-                  AI Summary
-                </h5>
+                <div className="flex items-center justify-between mb-3">
+                  <h5 className="font-semibold text-gray-800 flex items-center gap-2">
+                    <BookOpen size={20} className="text-green-600" />
+                    AI Summary
+                  </h5>
+                  {renderListenButton('mobile')}
+                </div>
                 {renderSummaryWithImages()}
               </div>
 
@@ -2442,25 +2460,6 @@ startxref
                 activeTab === "assessment" ? "Assessment" :
                   "AI Tutor"}
           </h1>
-        </div>
-
-        {/* Center Search Input */}
-        <div className="hidden md:flex items-center gap-2 max-w-md w-full mx-4">
-          <div className="relative w-full">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              placeholder="Ask anything about this topic..."
-              className="w-full pl-9 pr-12 py-1.5 bg-slate-50 border border-slate-200/80 rounded-full text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-            />
-            <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-[10px] font-semibold text-slate-400">
-              Ctrl K
-            </span>
-          </div>
         </div>
 
         {/* Right Status & Profile */}

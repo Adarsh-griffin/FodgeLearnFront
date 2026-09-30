@@ -309,9 +309,12 @@ class ApiService {
     return response.json();
   }
 
-  // Get text content
-  async getText(): Promise<{ text: string; images: string[]; fileName?: string }> {
-    const response = await fetch(`${this.baseURL}/api/get_text`);
+  // Get text content - fileName pins this to one specific document,
+  // matching how /api/qa and friends already resolve which document to use.
+  // Omitting it falls back to "most recently uploaded" server-side.
+  async getText(fileName?: string): Promise<{ text: string; images: string[]; fileName?: string; status: string }> {
+    const query = fileName ? `?fileName=${encodeURIComponent(fileName)}` : '';
+    const response = await fetch(`${this.baseURL}/api/get_text${query}`);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -322,13 +325,15 @@ class ApiService {
     return {
       text: data.script_text || '',
       images: data.images || [],
-      fileName: data.fileName
+      fileName: data.fileName,
+      status: data.status || 'completed',
     };
   }
 
-  // Get reference links
-  async getLinks(): Promise<ReferenceLink[]> {
-    const response = await fetch(`${this.baseURL}/api/get_links`);
+  // Get reference links - same fileName pinning as getText().
+  async getLinks(fileName?: string): Promise<ReferenceLink[]> {
+    const query = fileName ? `?fileName=${encodeURIComponent(fileName)}` : '';
+    const response = await fetch(`${this.baseURL}/api/get_links${query}`);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

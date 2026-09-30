@@ -13,7 +13,7 @@
    * A different format will require also updating the theme in tailwind.config.ts.
   */
   :root {
-    /* LearnFodge official brand palette, converted from the supplied hex
+    /* LearnFordge official brand palette, converted from the supplied hex
        swatches to HSL:
          #0B1B3D navy   -> 221 69% 14%
          #4B6BFF blue   -> 229 100% 65%  (primary)

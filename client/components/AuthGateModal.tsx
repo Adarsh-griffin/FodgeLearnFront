@@ -46,7 +46,7 @@ export function AuthGateModal({
         <div className="w-16 h-16 gradient-brand rounded-full flex items-center justify-center mx-auto mb-6">
           <GraduationCap className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-3">Welcome to LearnFodge</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-3">Welcome to LearnFordge</h1>
         <p className="text-sm text-muted-foreground mb-8">
           Sign in so your AI Tutor remembers what you know across visits and devices - or continue as a guest and
           keep everything on this device only.

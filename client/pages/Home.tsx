@@ -94,7 +94,7 @@ export function Home() {
               Learn anything, <span className="gradient-brand bg-clip-text text-transparent">the smart way</span>
             </h1>
             <p className="text-base sm:text-lg text-muted-foreground mb-8 leading-relaxed max-w-xl">
-              LearnFodge provides a completely interactive and adaptive learning experience. We use AI to manage and
+              LearnFordge provides a completely interactive and adaptive learning experience. We use AI to manage and
               customize your educational journey, ensuring that every piece of content, every quiz, and every
               challenge is perfectly matched to your current skill level and goals.
             </p>
@@ -132,7 +132,7 @@ export function Home() {
         <div className="bg-secondary rounded-2xl p-4 sm:p-6 mb-16 sm:mb-24">
           <img
             src="/how it works image/main.png"
-            alt="LearnFodge main interface"
+            alt="LearnFordge main interface"
             className="w-full h-auto rounded-xl shadow-premium"
           />
         </div>

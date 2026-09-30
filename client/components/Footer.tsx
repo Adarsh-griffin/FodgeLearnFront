@@ -11,7 +11,7 @@ export function Footer() {
             {/* Logo */}
             <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-4 py-2 rounded-full">
               <GraduationCap className="w-4 h-4" />
-              <span className="text-sm font-bold tracking-wide">LearnFodge</span>
+              <span className="text-sm font-bold tracking-wide">LearnFordge</span>
             </div>
 
             {/* Nav */}
@@ -45,7 +45,7 @@ export function Footer() {
 
           {/* Bottom row: legal */}
           <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-white/80">
-            <p>© {new Date().getFullYear()} LearnFodge. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} LearnFordge. All rights reserved.</p>
             <div className="flex items-center gap-6">
               <a className="hover:text-white underline-offset-2 hover:underline" href="#">Privacy Policy</a>
               <a className="hover:text-white underline-offset-2 hover:underline" href="#">Terms of Use</a>
