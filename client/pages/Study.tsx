@@ -16,7 +16,6 @@ import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import 'katex/dist/katex.min.css';
 import { AILearningLoader } from "@/components/ui/AILearningLoader";
-import { Footer } from "@/components/Footer";
 
 
 type AssessmentState = 'welcome' | 'question' | 'answer' | 'feedback';
@@ -612,7 +611,6 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
             )}
 
           </div>
-          <Footer />
         </div>
       </div>
     </div>
@@ -1233,7 +1231,6 @@ startxref
               </div>
             </div>
           </div>
-          <Footer />
         </div>
       </div>
     </div>
@@ -2379,7 +2376,6 @@ startxref
               </div>
             )}
           </div>
-          <Footer />
         </div>
       </div>
     );
