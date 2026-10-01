@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth, SignInButton } from "@clerk/react";
-import { FileText, GraduationCap, CheckCircle2, Menu, Search, Bell } from "lucide-react";
+import { FileText, GraduationCap, CheckCircle2, Menu, Search, Bell, Plus } from "lucide-react";
 import { apiService, FileInfo, StudyPlan, DiagnosticResult, LessonStep } from "@/lib/api";
 import { getTutorAuthHeaders } from "@/lib/identity";
 import { OnboardingStep } from "./OnboardingStep";
@@ -221,6 +221,13 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleChangeDocument}
+            title="Upload or switch document"
+            className="p-2 text-slate-500 hover:text-primary rounded-full hover:bg-slate-100 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
           <button
             onClick={() => setIsMobileTutorSheetOpen(true)}
             className="p-2 text-slate-500 hover:text-primary rounded-full hover:bg-slate-100 transition-colors"

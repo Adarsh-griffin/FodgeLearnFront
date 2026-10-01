@@ -86,7 +86,9 @@ export function TutorSidebar({
 
       <div className="my-3 mx-4 border-t border-slate-150" />
 
-      {/* Current Document / Topic Card */}
+      {/* Current Document / Topic Card - only when there's a real file to
+          show; otherwise this would just be showing fake placeholder data. */}
+      {fileName && (
       <div className="px-4 py-2">
         <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
           {isTypedTopic ? "Current Topic" : "Current Document"}
@@ -103,7 +105,7 @@ export function TutorSidebar({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-slate-800 truncate" title={displayName || "Document"}>
-                  {displayName || "rag_topic.pdf"}
+                  {displayName}
                 </p>
                 <p className="text-[11px] text-slate-400 font-normal">152 pages • PDF</p>
               </div>
@@ -119,6 +121,7 @@ export function TutorSidebar({
           )}
         </div>
       </div>
+      )}
 
       {/* Topics Roadmap List */}
       {plan && plan.steps.length > 0 && (

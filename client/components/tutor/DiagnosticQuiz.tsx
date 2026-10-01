@@ -131,7 +131,7 @@ export function DiagnosticQuiz({ fileId, goal, getAuthHeaders, onComplete }: Dia
   const progress = Math.round((question.questions_asked / question.max_questions) * 100);
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 sm:p-8 pb-32 sm:pb-12 overflow-y-auto hide-scrollbar">
+    <div className="flex-1 min-h-0 flex flex-col items-center p-4 sm:p-8 pb-32 sm:pb-12 overflow-y-auto hide-scrollbar">
       <div className="w-full max-w-2xl">
         <div className="mb-6">
           <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">

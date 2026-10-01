@@ -67,7 +67,7 @@ function StepCard({ step, index }: { step: StudyPlanStep; index: number }) {
 
 export function RoadmapView({ plan, onStart }: { plan: StudyPlan; onStart: () => void }) {
   return (
-    <div className="flex-1 overflow-y-auto hide-scrollbar p-4 sm:p-8 pb-32 sm:pb-12">
+    <div className="flex-1 min-h-0 overflow-y-auto hide-scrollbar p-4 sm:p-8 pb-32 sm:pb-12">
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1">Your Learning Path</h1>

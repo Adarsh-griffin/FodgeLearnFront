@@ -16,6 +16,7 @@ import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import 'katex/dist/katex.min.css';
 import { AILearningLoader } from "@/components/ui/AILearningLoader";
+import { Footer } from "@/components/Footer";
 
 
 type AssessmentState = 'welcome' | 'question' | 'answer' | 'feedback';
@@ -145,50 +146,20 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
   return (
     <div className="h-full w-full flex flex-col min-h-0">
       <div className="flex-1 flex min-h-0">
-        {/* Left Sidebar (Desktop Only) */}
-        <div className="hidden lg:flex w-16 sm:w-20 bg-secondary flex-col items-center py-4 gap-3 flex-shrink-0">
-          <button
-            onClick={() => navigate("/")}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-            title="Home"
-          >
-            <Home className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => handleTabChange("tutor")}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-            title="AI Tutor"
-          >
-            <GraduationCap className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => handleTabChange("learning")}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-            title="Summary"
-          >
-            <BookOpen className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => handleTabChange("upload")}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-            title="Upload Documents"
-          >
-            <Upload className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => handleTabChange("assessment")}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors bg-primary/10 text-primary"
-            title="Assessment"
-          >
-            <FileText className="w-5 h-5" />
-          </button>
-        </div>
+        {/* Left Sidebar (Desktop Only) - same full labeled sidebar used on
+            the AI Tutor and Summary pages, not a separate icon-only rail. */}
+        <TutorSidebar
+          activeTab="assessment"
+          handleTabChange={handleTabChange}
+          navigate={navigate}
+          fileName={null}
+        />
 
-        <div className="flex-1 p-4 sm:p-8 overflow-y-auto min-h-0 hide-scrollbar pb-24 lg:pb-8">
-          <div className="max-w-4xl mx-auto">
+        <div className="flex-1 overflow-y-auto min-h-0 hide-scrollbar flex flex-col">
+          <div className="w-full flex-1 flex flex-col">
             {/* Error Display */}
             {error && (
-              <div className="mb-6 p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
+              <div className="m-4 sm:m-6 p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
                 <div className="flex items-center gap-2">
                   <XCircle size={16} className="text-destructive" />
                   <p className="text-destructive font-medium">Error</p>
@@ -199,146 +170,112 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
 
             {/* Welcome State */}
             {currentState === 'welcome' && (
-              <>
-                {/* Desktop welcome card */}
-                <div className="hidden lg:block bg-white rounded-xl shadow-lg p-8">
-                  <div className="text-center">
-                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <FileText size={40} className="text-primary" />
-                    </div>
-                    <h2 className="text-3xl font-bold text-gray-800 mb-4">Ready for Assessment?</h2>
-                    <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-                      Test your understanding with AI-generated questions based on your latest uploaded document.
-                      Get personalized feedback and improve your learning.
-                    </p>
+              <div className="relative flex-1 w-full min-h-[calc(100vh-4rem)] flex items-center justify-center p-6 sm:p-12 lg:p-16 bg-gradient-to-br from-indigo-50/60 via-purple-50/40 to-blue-50/50 overflow-hidden select-none">
+                {/* Background Ambient Blur Blobs */}
+                <div className="absolute -left-20 -top-20 w-[500px] h-[500px] bg-purple-200/40 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -right-20 -bottom-20 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-3xl pointer-events-none" />
 
-                    <div className="space-y-4">
-                      <div className="flex gap-4 max-w-2xl mx-auto">
-                        <button
-                          onClick={() => generateQuestion('theoretical')}
-                          disabled={generatingType !== null}
-                          className="flex-1 px-6 py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                          {generatingType === 'theoretical' ? (
-                            <>
-                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <FileText size={20} />
-                              Generate Theoretical Question
-                            </>
-                          )}
-                        </button>
-
-                        <button
-                          onClick={() => generateQuestion('mcq')}
-                          disabled={generatingType !== null}
-                          className="flex-1 px-6 py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                          {generatingType === 'mcq' ? (
-                            <>
-                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle size={20} />
-                              Generate MCQ
-                            </>
-                          )}
-                        </button>
+                {/* 3D Floating Element 1: Top-Left Document Card with Orbit Ring */}
+                <div className="absolute top-12 left-8 sm:top-16 sm:left-16 z-0 animate-ai-float pointer-events-none hidden sm:block">
+                  <div className="relative">
+                    {/* Orbit Ring */}
+                    <div className="absolute -inset-4 rounded-full border border-indigo-300/50 rotate-45 pointer-events-none" />
+                    {/* Floating Document Card */}
+                    <div className="w-20 h-24 bg-white/90 backdrop-blur-md rounded-2xl border border-indigo-200/80 shadow-lg p-3 flex flex-col justify-center gap-2 rotate-[-10deg]">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
+                        <FileText className="w-4 h-4" />
                       </div>
-
-                      <p className="text-sm text-gray-500">
-                        Questions are generated from your most recently uploaded document
-                      </p>
+                      <div className="space-y-1">
+                        <div className="w-full h-1 bg-indigo-200 rounded-full" />
+                        <div className="w-3/4 h-1 bg-indigo-200 rounded-full" />
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Mobile welcome screen */}
-                <div className="lg:hidden">
-                  {/* Decorative header illustration */}
-                  <div className="relative h-40 flex items-center justify-center mb-6 select-none">
-                    <div className="relative w-24 h-28 bg-white rounded-2xl shadow-md border border-border flex flex-col items-center justify-center gap-2 p-3 rotate-[-4deg]">
-                      <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
-                      <div className="w-full space-y-1.5">
-                        <div className="h-1.5 bg-muted rounded-full w-full" />
-                        <div className="h-1.5 bg-muted rounded-full w-4/5" />
-                        <div className="h-1.5 bg-muted rounded-full w-full" />
-                      </div>
+                {/* 3D Floating Element 2: Bottom-Right Orb with Orbit Ring */}
+                <div className="absolute bottom-12 right-10 sm:bottom-20 sm:right-20 z-0 animate-ai-sparkle-1 pointer-events-none hidden sm:block">
+                  <div className="relative">
+                    <div className="absolute -inset-5 rounded-full border border-purple-300/50 -rotate-30 pointer-events-none" />
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-400 shadow-xl shadow-purple-500/30 flex items-center justify-center">
+                      <Sparkles className="w-6 h-6 text-white animate-pulse" />
                     </div>
+                  </div>
+                </div>
 
-                    <div className="absolute bottom-4 left-8 w-11 h-11 rounded-2xl bg-primary shadow-md flex items-center justify-center rotate-[-8deg]">
-                      <HelpCircle className="w-5 h-5 text-white" />
+                {/* Center Elevated Main Assessment Card */}
+                <div className="relative z-10 bg-white/95 backdrop-blur-md rounded-[2.5rem] p-8 sm:p-14 lg:p-16 shadow-2xl shadow-indigo-100/90 border border-slate-200/80 max-w-3xl lg:max-w-4xl w-full text-center space-y-6 sm:space-y-8">
+                  {/* Top Glowing Icon Badge */}
+                  <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-50 to-purple-50 border border-indigo-100/80 shadow-md shadow-indigo-100/50 flex items-center justify-center mx-auto">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-100/80 flex items-center justify-center text-indigo-600">
+                      <FileText className="w-6 h-6" />
                     </div>
-                    <div className="absolute top-6 right-6 w-11 h-11 rounded-2xl bg-warning shadow-md flex items-center justify-center rotate-[8deg]">
-                      <BarChart3 className="w-5 h-5 text-white" />
+                    {/* Floating Sparkle on Badge */}
+                    <div className="absolute -top-1 -right-1 text-amber-400">
+                      <Sparkles className="w-5 h-5 fill-current" />
                     </div>
                   </div>
 
-                  <h2 className="text-h1 text-center text-slate-900">
-                    Ready for <span className="text-primary">Assessment?</span>
-                  </h2>
-                  <p className="text-sm text-slate-500 text-center leading-relaxed mt-3 mb-7 px-2">
-                    Test your understanding with AI-generated questions based on your latest uploaded document. Get
-                    personalized feedback and improve your learning.
-                  </p>
-
+                  {/* Headline & Description */}
                   <div className="space-y-3">
+                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                      Ready for <span className="text-indigo-600">Assessment?</span>
+                    </h2>
+                    <p className="text-sm sm:text-base text-slate-500 font-medium leading-relaxed max-w-lg mx-auto">
+                      Test your understanding with AI-generated questions based on your latest uploaded document. Get personalized feedback and improve your learning.
+                    </p>
+                  </div>
+
+                  {/* Action Buttons Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto pt-2">
+                    {/* Theoretical Question Button */}
                     <button
                       onClick={() => generateQuestion('theoretical')}
                       disabled={generatingType !== null}
-                      className="w-full flex items-center gap-3.5 p-4 rounded-2xl bg-primary/70 border border-primary/10 text-left disabled:opacity-60 transition-colors hover:bg-primary/5"
+                      className="px-6 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2.5 cursor-pointer"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-white text-primary flex items-center justify-center shadow-xs flex-shrink-0">
-                        <FileText className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-900 text-sm">Generate Theoretical Question</p>
-                        <p className="text-xs text-slate-500 mt-0.5">Get concept-based questions to test your understanding.</p>
-                      </div>
-                      <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center flex-shrink-0">
-                        {generatingType === 'theoretical' ? (
-                          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <ArrowRight className="w-4 h-4 text-primary" />
-                        )}
-                      </div>
+                      {generatingType === 'theoretical' ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Generating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-5 h-5" />
+                          <span>Generate Theoretical Question</span>
+                          <ArrowRight className="w-4 h-4 ml-auto" />
+                        </>
+                      )}
                     </button>
 
+                    {/* MCQ Question Button */}
                     <button
                       onClick={() => generateQuestion('mcq')}
                       disabled={generatingType !== null}
-                      className="w-full flex items-center gap-3.5 p-4 rounded-2xl bg-primary/70 border border-primary/10 text-left disabled:opacity-60 transition-colors hover:bg-primary/5"
+                      className="px-6 py-4 bg-white hover:bg-slate-50 text-indigo-600 border-2 border-indigo-200 hover:border-indigo-400 font-bold text-sm sm:text-base rounded-2xl shadow-2xs hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2.5 cursor-pointer"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-white text-primary flex items-center justify-center shadow-xs flex-shrink-0">
-                        <CheckCircle className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-900 text-sm">Generate MCQ</p>
-                        <p className="text-xs text-slate-500 mt-0.5">Get multiple choice questions from your uploaded document.</p>
-                      </div>
-                      <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center flex-shrink-0">
-                        {generatingType === 'mcq' ? (
-                          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <ArrowRight className="w-4 h-4 text-primary" />
-                        )}
-                      </div>
+                      {generatingType === 'mcq' ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                          <span>Generating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-5 h-5 text-indigo-600" />
+                          <span>Generate MCQ</span>
+                          <ArrowRight className="w-4 h-4 ml-auto text-indigo-600" />
+                        </>
+                      )}
                     </button>
+                  </div>
 
-                    <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-amber-50 border border-amber-100">
-                      <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                      <p className="text-xs text-amber-800 font-medium">
-                        Questions are generated from your most recently uploaded document.
-                      </p>
-                    </div>
+                  {/* Footer Info Note */}
+                  <div className="pt-2 flex items-center justify-center gap-1.5 text-xs text-slate-400 font-medium">
+                    <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Questions are generated from your most recently uploaded document</span>
                   </div>
                 </div>
-              </>
+              </div>
             )}
 
             {/* Assessment Tab */}
@@ -674,7 +611,8 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
               })()
             )}
 
-          </div >
+          </div>
+          <Footer />
         </div>
       </div>
     </div>
@@ -1060,43 +998,12 @@ startxref
 
       {/* Desktop Upload Composition (>= lg) */}
       <div className="hidden lg:flex flex-1 min-h-0 w-full bg-[#FAFAFC]">
-        <div className="w-60 bg-white border-r border-slate-200/80 flex flex-col py-6 px-4 gap-1 flex-shrink-0">
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-          >
-            <Home className="w-[18px] h-[18px]" />
-            Home
-          </button>
-          <button
-            onClick={() => handleTabChange("upload")}
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-primary/10 text-primary transition-colors"
-          >
-            <Upload className="w-[18px] h-[18px]" />
-            Upload
-          </button>
-          <button
-            onClick={() => handleTabChange("tutor")}
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-          >
-            <GraduationCap className="w-[18px] h-[18px]" />
-            AI Tutor
-          </button>
-          <button
-            onClick={() => handleTabChange("learning")}
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-          >
-            <BookOpen className="w-[18px] h-[18px]" />
-            Summary
-          </button>
-          <button
-            onClick={() => handleTabChange("assessment")}
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-          >
-            <FileText className="w-[18px] h-[18px]" />
-            Assessments
-          </button>
-        </div>
+        <TutorSidebar
+          activeTab="upload"
+          handleTabChange={handleTabChange}
+          navigate={navigate}
+          fileName={null}
+        />
 
         <div className="flex-1 min-h-0 overflow-y-auto p-10">
           <div className="max-w-3xl mx-auto">
@@ -1326,6 +1233,7 @@ startxref
               </div>
             </div>
           </div>
+          <Footer />
         </div>
       </div>
     </div>
@@ -2471,6 +2379,7 @@ startxref
               </div>
             )}
           </div>
+          <Footer />
         </div>
       </div>
     );

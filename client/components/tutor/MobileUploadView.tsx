@@ -5,6 +5,7 @@ import {
   CheckCircle,
   Check
 } from "lucide-react";
+import { TutorLoadingScreen } from "./TutorLoadingScreen";
 
 interface MobileUploadViewProps {
   handleDragOver: (e: React.DragEvent) => void;
@@ -60,14 +61,12 @@ export function MobileUploadView({
           is submitted until the first one completes, so the user isn't
           staring at an unchanged form wondering if anything happened. */}
       {isProcessing && (
-        <div className="fixed inset-0 z-30 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4 px-8 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center">
-            <div className="w-6 h-6 border-[3px] border-white border-t-transparent rounded-full animate-spin" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-base font-bold text-slate-900">Preparing your learning module...</p>
-            <p className="text-sm text-slate-500">Analyzing content and building your AI Tutor session.</p>
-          </div>
+        <div className="fixed inset-0 z-30 bg-white/90 backdrop-blur-sm flex flex-col">
+          <TutorLoadingScreen
+            message="Preparing your learning module..."
+            subMessages={["Analyzing content and building your AI Tutor session."]}
+            size="sm"
+          />
         </div>
       )}
 

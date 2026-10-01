@@ -369,7 +369,7 @@ export function LessonView({
   let sectionCounter = 0;
 
   return (
-    <main className="flex-1 overflow-y-auto hide-scrollbar bg-[#FAFAFC] px-4 sm:px-8 pt-4 sm:pt-6 pb-32 sm:pb-12 flex flex-col select-none">
+    <main className="flex-1 min-h-0 overflow-y-auto hide-scrollbar bg-[#FAFAFC] px-4 sm:px-8 pt-4 sm:pt-6 pb-32 sm:pb-12 flex flex-col select-none">
       {/* Hidden Audio Element */}
       {audioUrlState && (
         <audio

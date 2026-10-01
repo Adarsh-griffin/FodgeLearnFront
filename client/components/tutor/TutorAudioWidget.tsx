@@ -5,6 +5,10 @@ const POSITION_STORAGE_KEY = "learnforge_tutor_audio_widget_pos";
 const WIDGET_WIDTH = 224; // w-56
 const WIDGET_DEFAULT_HEIGHT = 240;
 const EDGE_MARGIN = 16;
+const MOBILE_BREAKPOINT = 1024; // matches Tailwind's `lg:` used by MobileBottomNav
+const MOBILE_NAV_CLEARANCE = 76; // keeps the widget from landing under the fixed bottom nav
+
+const bottomClearance = () => (window.innerWidth < MOBILE_BREAKPOINT ? MOBILE_NAV_CLEARANCE : 0);
 
 interface TutorAudioWidgetProps {
   hasAudio: boolean;
@@ -29,10 +33,11 @@ interface TutorAudioWidgetProps {
  * to slow, professional cues (breathing, blinking, a pointer gliding
  * between diagram nodes) - never a full cartoon loop.
  *
- * Freely draggable (pointer events on the wrapper, ignoring clicks that
- * land on the play button/scrubber/speed control) so the learner can park
- * it wherever it doesn't block the lesson text; position is clamped to the
- * viewport and remembered per-browser in localStorage.
+ * Freely draggable on both desktop and mobile (Pointer Events cover touch
+ * too - clicks/taps on the play button/scrubber/speed control are excluded
+ * from the drag) so the learner can park it wherever it doesn't block the
+ * lesson text; position is clamped to the viewport (keeping clear of the
+ * fixed mobile bottom nav) and remembered per-browser in localStorage.
  */
 export function TutorAudioWidget({
   hasAudio,
@@ -58,7 +63,7 @@ export function TutorAudioWidget({
     const w = el?.offsetWidth ?? WIDGET_WIDTH;
     const h = el?.offsetHeight ?? WIDGET_DEFAULT_HEIGHT;
     const maxX = Math.max(EDGE_MARGIN, window.innerWidth - w - EDGE_MARGIN);
-    const maxY = Math.max(EDGE_MARGIN, window.innerHeight - h - EDGE_MARGIN);
+    const maxY = Math.max(EDGE_MARGIN, window.innerHeight - h - EDGE_MARGIN - bottomClearance());
     return { x: Math.min(Math.max(x, EDGE_MARGIN), maxX), y: Math.min(Math.max(y, EDGE_MARGIN), maxY) };
   }, []);
 
@@ -78,7 +83,7 @@ export function TutorAudioWidget({
     setPosition(
       clamp(
         EDGE_MARGIN,
-        window.innerHeight - WIDGET_DEFAULT_HEIGHT - EDGE_MARGIN,
+        window.innerHeight - WIDGET_DEFAULT_HEIGHT - EDGE_MARGIN - bottomClearance(),
       ),
     );
   }, [clamp]);
@@ -130,7 +135,7 @@ export function TutorAudioWidget({
       onPointerMove={handlePointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
-      className="hidden lg:block fixed z-30 w-56 cursor-grab active:cursor-grabbing select-none"
+      className="fixed z-30 w-48 sm:w-56 cursor-grab active:cursor-grabbing select-none"
       style={{ left: position.x, top: position.y, touchAction: "none" }}
     >
       {/* Illustration - teacher + chalkboard, floating directly on the page, no card/background */}

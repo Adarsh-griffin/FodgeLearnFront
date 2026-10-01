@@ -197,23 +197,56 @@ export function Home() {
         </div>
       </section>
 
-      {/* Simple CTA */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
-        <div className="gradient-spectrum rounded-2xl px-6 sm:px-12 py-12 sm:py-16 text-center shadow-premium">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4">
-            {isReturning ? "Ready to keep learning?" : "Ready to Start Learning?"}
-          </h2>
-          <p className="text-base sm:text-lg text-white/85 mb-8 max-w-2xl mx-auto">
-            {isReturning
-              ? "Pick up right where you left off."
-              : "Join our platform and begin your journey to mastering new skills and knowledge."}
-          </p>
-          <button
-            onClick={handleGetStarted}
-            className="inline-block px-8 py-3.5 bg-white text-primary rounded-xl font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
-          >
-            {isReturning ? "Continue Learning" : "Get Started"}
-          </button>
+      {/* Ready to keep learning? CTA Footer Banner */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <div 
+          className="relative rounded-[2rem] border border-[#E0E7FF]/80 p-8 sm:p-12 lg:p-16 overflow-hidden"
+          style={{
+            background: "linear-gradient(135deg, #FFFFFF 0%, #F7F8FF 45%, #EEF3FF 100%)",
+            boxShadow: "0 20px 50px rgba(91, 75, 255, 0.08)"
+          }}
+        >
+          {/* Soft Purple Ambient Glow Accent */}
+          <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-[#E6E0FF]/60 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 lg:gap-16">
+            {/* Left Content Column */}
+            <div className="flex-1 text-center md:text-left space-y-3">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#111827] tracking-tight leading-tight">
+                Ready to keep <span className="text-[#5146E5]">learning?</span>
+              </h2>
+              <p className="text-base sm:text-xl text-[#52617A] font-medium max-w-xl mx-auto md:mx-0">
+                {isReturning
+                  ? "Pick up right where you left off."
+                  : "Join our platform and begin your journey to mastering new skills and knowledge."}
+              </p>
+              <div className="pt-4">
+                <button
+                  onClick={handleGetStarted}
+                  className="inline-flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-[#5146E5] to-[#3267F5] hover:opacity-95 text-white font-bold text-base rounded-full shadow-lg shadow-[#5146E5]/25 hover:shadow-[#5146E5]/35 hover:scale-[1.03] active:scale-95 transition-all mx-auto md:mx-0 cursor-pointer"
+                >
+                  <span>{isReturning ? "Continue Learning" : "Get Started"}</span>
+                  <span className="text-lg leading-none">→</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Right Graphic Illustration Column with Soft Radial Glow */}
+            <div className="relative w-64 sm:w-80 md:w-[400px] flex-shrink-0 flex items-center justify-center md:justify-end">
+              {/* Soft Blue-Lavender Radial Glow Behind Illustration */}
+              <div 
+                className="absolute inset-0 rounded-full blur-3xl pointer-events-none opacity-80"
+                style={{
+                  background: "radial-gradient(circle at center, #DDE7FF 0%, #F1F5FF 50%, transparent 75%)"
+                }}
+              />
+              <img
+                src="/learning_footer_sticker.png"
+                alt="3D Graduation Cap and Textbooks Illustration"
+                className="relative z-10 w-full h-auto object-contain max-h-80 hover:scale-105 transition-transform duration-500 pointer-events-none drop-shadow-[0_15px_30px_rgba(81,70,229,0.12)]"
+              />
+            </div>
+          </div>
         </div>
       </section>
     </div>
