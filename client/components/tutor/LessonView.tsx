@@ -60,7 +60,7 @@ const getConceptColorClass = (term: string) => {
     return {
       badge: "bg-blue-600 text-white",
       bg: "bg-blue-50/90 border-blue-200 text-blue-950",
-      pill: "bg-blue-600 text-white border-blue-700 font-extrabold shadow-2xs",
+      pill: "bg-blue-50 text-blue-800 border-blue-200 font-bold",
       accent: "border-blue-500",
       icon: "🟦"
     };
@@ -69,7 +69,7 @@ const getConceptColorClass = (term: string) => {
     return {
       badge: "bg-indigo-600 text-white",
       bg: "bg-indigo-50/90 border-indigo-200 text-indigo-950",
-      pill: "bg-indigo-600 text-white border-indigo-700 font-extrabold shadow-2xs",
+      pill: "bg-indigo-50 text-indigo-800 border-indigo-200 font-bold",
       accent: "border-indigo-500",
       icon: "🟪"
     };
@@ -78,7 +78,7 @@ const getConceptColorClass = (term: string) => {
     return {
       badge: "bg-amber-600 text-white",
       bg: "bg-amber-50/90 border-amber-200 text-amber-950",
-      pill: "bg-amber-600 text-white border-amber-700 font-extrabold shadow-2xs",
+      pill: "bg-amber-50 text-amber-800 border-amber-200 font-bold",
       accent: "border-amber-500",
       icon: "🟧"
     };
@@ -87,7 +87,7 @@ const getConceptColorClass = (term: string) => {
     return {
       badge: "bg-emerald-600 text-white",
       bg: "bg-emerald-50/90 border-emerald-200 text-emerald-950",
-      pill: "bg-emerald-600 text-white border-emerald-700 font-extrabold shadow-2xs",
+      pill: "bg-emerald-50 text-emerald-800 border-emerald-200 font-bold",
       accent: "border-emerald-500",
       icon: "🟩"
     };
@@ -95,7 +95,7 @@ const getConceptColorClass = (term: string) => {
   return {
     badge: "bg-indigo-600 text-white",
     bg: "bg-indigo-50/90 border-indigo-200 text-indigo-950",
-    pill: "bg-indigo-600 text-white border-indigo-700 font-extrabold shadow-2xs",
+    pill: "bg-indigo-50 text-indigo-800 border-indigo-200 font-bold",
     accent: "border-indigo-500",
     icon: "🟪"
   };
@@ -677,15 +677,15 @@ export function LessonView({
                         return (
                           <div className="my-6 rounded-2xl bg-slate-900 text-slate-100 p-6 font-mono text-sm sm:text-base overflow-x-auto shadow-md border border-slate-800 space-y-3">
                             <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                              <div className="flex items-center gap-2 text-primary/70 font-bold text-xs uppercase tracking-wider">
-                                <Zap className="w-4 h-4 text-primary/70" />
+                              <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
+                                <Zap className="w-4 h-4 text-emerald-400" />
                                 <span>🟪 Kinematic Equations & Formula Block</span>
                               </div>
-                              <span className="text-[10px] bg-primary text-primary/40 px-2 py-0.5 rounded border border-primary font-sans font-semibold">
+                              <span className="text-[10px] bg-emerald-500/15 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/40 font-sans font-semibold">
                                 Mathematical Formulation
                               </span>
                             </div>
-                            <div className="text-primary/20 font-bold text-base sm:text-lg pt-1 leading-relaxed">
+                            <div className="text-emerald-200 font-bold text-base sm:text-lg pt-1 leading-relaxed">
                               {children}
                             </div>
                           </div>

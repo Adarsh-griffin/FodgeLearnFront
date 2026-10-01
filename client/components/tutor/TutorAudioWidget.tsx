@@ -77,7 +77,7 @@ export function TutorAudioWidget({
     }
     setPosition(
       clamp(
-        window.innerWidth - WIDGET_WIDTH - EDGE_MARGIN,
+        EDGE_MARGIN,
         window.innerHeight - WIDGET_DEFAULT_HEIGHT - EDGE_MARGIN,
       ),
     );

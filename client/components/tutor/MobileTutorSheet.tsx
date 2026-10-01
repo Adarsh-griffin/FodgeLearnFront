@@ -16,6 +16,8 @@ import {
   Plus
 } from "lucide-react";
 import { apiService } from "@/lib/api";
+import { ChatMarkdown } from "./ChatMarkdown";
+import { useLiveSpeechPreview } from "@/hooks/useLiveSpeechPreview";
 
 interface ChatMessage {
   id: string;
@@ -61,6 +63,7 @@ export function MobileTutorSheet({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const liveSpeechPreview = useLiveSpeechPreview((text) => setInput(text));
 
   if (!isOpen) return null;
 
@@ -152,7 +155,9 @@ export function MobileTutorSheet({
       };
       recorder.start();
       mediaRecorderRef.current = recorder;
+      setInput("");
       setIsRecording(true);
+      liveSpeechPreview.start();
     } catch {
       alert("Could not access microphone.");
     }
@@ -160,7 +165,9 @@ export function MobileTutorSheet({
 
   const stopRecording = () => {
     mediaRecorderRef.current?.stop();
+    liveSpeechPreview.stop();
     setIsRecording(false);
+    setInput("");
   };
 
   return (
@@ -239,7 +246,11 @@ export function MobileTutorSheet({
                         : "bg-slate-50 text-slate-800 border border-slate-200/70 rounded-bl-none shadow-2xs"
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{m.content}</p>
+                    {m.role === "tutor" ? (
+                      <ChatMarkdown content={m.content} />
+                    ) : (
+                      <p className="whitespace-pre-wrap">{m.content}</p>
+                    )}
                     {m.role === "tutor" && (
                       <button
                         onClick={() => handleSpeakMessage(m)}

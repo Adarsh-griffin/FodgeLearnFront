@@ -1336,6 +1336,7 @@ startxref
     const [linksLoading, setLinksLoading] = useState(false);
     const [summaryText, setSummaryText] = useState<string>('');
     const [summaryImages, setSummaryImages] = useState<string[]>([]);
+    const [brokenSummaryImages, setBrokenSummaryImages] = useState<Set<string>>(new Set());
     const [summaryStatus, setSummaryStatus] = useState<string>('completed');
     const [textLoading, setTextLoading] = useState(false);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -1473,6 +1474,7 @@ startxref
     // Load reference links + summary whenever the selected document changes
     useEffect(() => {
       if (!selectedFile) return;
+      setBrokenSummaryImages(new Set());
       loadLinksForFile(selectedFile);
       loadSummaryForFile(selectedFile);
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1862,25 +1864,32 @@ startxref
       const firstRowImages = summaryImages.slice(0, 2);
       const secondRowImages = summaryImages.slice(2);
 
-      const renderImageRow = (images: string[], keyPrefix: string) =>
-        images.length > 0 && (
-          <div className="grid grid-cols-2 gap-4 my-4">
-            {images.map((imgUrl, idx) => (
-              <div
-                key={`${keyPrefix}-${idx}`}
-                className="rounded-lg overflow-hidden border border-gray-200 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => setZoomedImage(imgUrl)}
-              >
-                <img
-                  src={imgUrl}
-                  alt="Educational Diagram"
-                  className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
-                  loading="lazy"
-                />
-              </div>
-            ))}
-          </div>
+      const renderImageRow = (images: string[], keyPrefix: string) => {
+        const visibleImages = images.filter((url) => !brokenSummaryImages.has(url));
+        return (
+          visibleImages.length > 0 && (
+            <div className="grid grid-cols-2 gap-4 my-4">
+              {visibleImages.map((imgUrl, idx) => (
+                <div
+                  key={`${keyPrefix}-${idx}`}
+                  className="rounded-lg overflow-hidden border border-gray-200 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setZoomedImage(imgUrl)}
+                >
+                  <img
+                    src={imgUrl}
+                    alt="Educational Diagram"
+                    className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                    onError={() =>
+                      setBrokenSummaryImages((prev) => new Set(prev).add(imgUrl))
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          )
         );
+      };
 
       // The AI summary occasionally comes back as a markdown table (e.g. a
       // "Section | What it Covers" breakdown). Tailwind Typography's plain

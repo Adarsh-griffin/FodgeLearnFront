@@ -3,9 +3,10 @@ import {
   Mic, 
   Square, 
   Send, 
-  Volume2, 
-  Sparkles, 
-  Target, 
+  Volume2,
+  Sparkles,
+  GraduationCap,
+  Target,
   Play, 
   HelpCircle,
   Lightbulb,
@@ -15,6 +16,8 @@ import {
 } from "lucide-react";
 import { apiService, StudyPlan, masteryBandClient } from "@/lib/api";
 import { BAND_STYLES } from "./RoadmapView";
+import { ChatMarkdown } from "./ChatMarkdown";
+import { useLiveSpeechPreview } from "@/hooks/useLiveSpeechPreview";
 
 interface ChatMessage {
   id: string;
@@ -55,6 +58,7 @@ export function TutorAssistantPanel({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const liveSpeechPreview = useLiveSpeechPreview((text) => setInput(text));
 
   const contextualize = (text: string) =>
     currentTopicTitle ? `Regarding "${currentTopicTitle}": ${text}` : text;
@@ -159,7 +163,9 @@ export function TutorAssistantPanel({
       };
       recorder.start();
       mediaRecorderRef.current = recorder;
+      setInput("");
       setIsRecording(true);
+      liveSpeechPreview.start();
     } catch {
       alert("Could not access microphone.");
     }
@@ -167,7 +173,9 @@ export function TutorAssistantPanel({
 
   const stopRecording = () => {
     mediaRecorderRef.current?.stop();
+    liveSpeechPreview.stop();
     setIsRecording(false);
+    setInput("");
   };
 
   const nextStep = (() => {
@@ -180,7 +188,7 @@ export function TutorAssistantPanel({
       {/* Top Header */}
       <div className="p-3.5 px-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
+          <GraduationCap className="w-4 h-4 text-primary" />
           <span className="font-extrabold text-slate-900 text-sm">AI Tutor</span>
         </div>
         <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20">
@@ -292,7 +300,11 @@ export function TutorAssistantPanel({
                       : "bg-white text-slate-800 border border-slate-200/90 rounded-bl-none"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{m.content}</p>
+                  {m.role === "tutor" ? (
+                    <ChatMarkdown content={m.content} />
+                  ) : (
+                    <p className="whitespace-pre-wrap">{m.content}</p>
+                  )}
                   {m.role === "tutor" && (
                     <button
                       onClick={() => handleSpeakMessage(m)}
