@@ -61,8 +61,8 @@ export function MobileUploadView({
           staring at an unchanged form wondering if anything happened. */}
       {isProcessing && (
         <div className="fixed inset-0 z-30 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4 px-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg">
-            <div className="w-8 h-8 border-[3px] border-white border-t-transparent rounded-full animate-spin" />
+          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center">
+            <div className="w-6 h-6 border-[3px] border-white border-t-transparent rounded-full animate-spin" />
           </div>
           <div className="space-y-1">
             <p className="text-base font-bold text-slate-900">Preparing your learning module...</p>
@@ -171,7 +171,7 @@ export function MobileUploadView({
               className={`w-full py-3.5 px-5 rounded-xl text-sm font-extrabold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
                 isTopicButtonDisabled
                   ? "bg-indigo-100/90 text-slate-400 cursor-not-allowed opacity-60"
-                  : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-95 text-white shadow-md cursor-pointer active:scale-98"
+                  : "bg-primary hover:bg-primary/90 text-white cursor-pointer active:scale-98"
               }`}
             >
               <Sparkles className="w-4 h-4" />

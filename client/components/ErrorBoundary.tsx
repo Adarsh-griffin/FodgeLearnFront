@@ -40,7 +40,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               this.setState({ error: null });
               window.location.reload();
             }}
-            className="px-6 py-2.5 gradient-brand text-white rounded-xl font-semibold hover:opacity-95 active:scale-[0.98] transition-all"
+            className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all"
           >
             Reload page
           </button>

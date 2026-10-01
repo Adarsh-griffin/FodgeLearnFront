@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap, HelpCircle, BarChart3, ArrowRight, Lightbulb } from "lucide-react";
+import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap, HelpCircle, BarChart3, ArrowRight, Lightbulb, Library, TrendingUp, UploadCloud, Presentation, FileType } from "lucide-react";
 import { TutorTab } from "@/components/tutor/TutorTab";
+import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
 import { MobileUploadView } from "@/components/tutor/MobileUploadView";
 import { MobileBottomNav } from "@/components/tutor/MobileBottomNav";
 import { MobileTutorSheet } from "@/components/tutor/MobileTutorSheet";
@@ -185,12 +186,12 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
           <div className="max-w-4xl mx-auto">
             {/* Error Display */}
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mb-6 p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <span className="text-red-600">❌</span>
-                  <p className="text-red-800 font-medium">Error</p>
+                  <XCircle size={16} className="text-destructive" />
+                  <p className="text-destructive font-medium">Error</p>
                 </div>
-                <p className="text-red-700 mt-1">{error}</p>
+                <p className="text-destructive/90 mt-1">{error}</p>
               </div>
             )}
 
@@ -258,38 +259,26 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                 {/* Mobile welcome screen */}
                 <div className="lg:hidden">
                   {/* Decorative header illustration */}
-                  <div className="relative h-48 flex items-center justify-center mb-6 select-none">
-                    <div className="absolute w-40 h-40 rounded-full bg-gradient-to-br from-indigo-200/70 via-purple-200/60 to-pink-100/50 blur-xl" />
-                    <div className="absolute top-2 left-6 grid grid-cols-3 gap-1 opacity-40">
-                      {Array.from({ length: 9 }).map((_, i) => (
-                        <span key={i} className="w-1 h-1 rounded-full bg-indigo-400" />
-                      ))}
-                    </div>
-                    <Sparkles className="absolute top-4 right-10 w-4 h-4 text-indigo-400" />
-                    <Sparkles className="absolute bottom-6 left-10 w-3 h-3 text-purple-400" />
-
-                    <div className="relative w-24 h-28 bg-white rounded-2xl shadow-lg border border-slate-100 flex flex-col items-center justify-center gap-2 p-3 rotate-[-4deg]">
-                      <CheckCircle className="w-6 h-6 text-indigo-500 flex-shrink-0" />
+                  <div className="relative h-40 flex items-center justify-center mb-6 select-none">
+                    <div className="relative w-24 h-28 bg-white rounded-2xl shadow-md border border-border flex flex-col items-center justify-center gap-2 p-3 rotate-[-4deg]">
+                      <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
                       <div className="w-full space-y-1.5">
-                        <div className="h-1.5 bg-slate-200 rounded-full w-full" />
-                        <div className="h-1.5 bg-slate-200 rounded-full w-4/5" />
-                        <div className="h-1.5 bg-slate-200 rounded-full w-full" />
+                        <div className="h-1.5 bg-muted rounded-full w-full" />
+                        <div className="h-1.5 bg-muted rounded-full w-4/5" />
+                        <div className="h-1.5 bg-muted rounded-full w-full" />
                       </div>
                     </div>
 
-                    <div className="absolute bottom-4 left-8 w-11 h-11 rounded-2xl bg-indigo-600 shadow-lg flex items-center justify-center rotate-[-8deg]">
+                    <div className="absolute bottom-4 left-8 w-11 h-11 rounded-2xl bg-primary shadow-md flex items-center justify-center rotate-[-8deg]">
                       <HelpCircle className="w-5 h-5 text-white" />
                     </div>
-                    <div className="absolute top-6 right-6 w-11 h-11 rounded-2xl bg-rose-400 shadow-lg flex items-center justify-center rotate-[8deg]">
+                    <div className="absolute top-6 right-6 w-11 h-11 rounded-2xl bg-warning shadow-md flex items-center justify-center rotate-[8deg]">
                       <BarChart3 className="w-5 h-5 text-white" />
                     </div>
                   </div>
 
-                  <h2 className="text-2xl font-extrabold text-center text-slate-900 tracking-tight">
-                    Ready for{" "}
-                    <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                      Assessment?
-                    </span>
+                  <h2 className="text-h1 text-center text-slate-900">
+                    Ready for <span className="text-primary">Assessment?</span>
                   </h2>
                   <p className="text-sm text-slate-500 text-center leading-relaxed mt-3 mb-7 px-2">
                     Test your understanding with AI-generated questions based on your latest uploaded document. Get
@@ -418,9 +407,9 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                                     disabled={isCorrect === true}
                                     className={`p-4 rounded-xl border-2 text-left transition-all ${selectedOption === opt.key
                                       ? isCorrect
-                                        ? 'border-green-500 bg-green-50 text-green-900'
-                                        : 'border-red-500 bg-red-50 text-red-900'
-                                      : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700'
+                                        ? 'border-success bg-success/10 text-foreground'
+                                        : 'border-destructive bg-destructive/10 text-foreground'
+                                      : 'border-border hover:border-primary/40 hover:bg-primary/5 text-foreground'
                                       }`}
                                   >
                                     <span className="font-bold mr-2 text-lg align-top">{opt.key})</span>
@@ -459,16 +448,16 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                               )}
 
                               {selectedOption && (
-                                <div className={`p-4 rounded-lg border flex items-start gap-3 ${isCorrect ? 'bg-green-100 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                                  {isCorrect ? <CheckCircle className="text-green-600 shrink-0 mt-1" /> : <XCircle className="text-red-600 shrink-0 mt-1" />}
+                                <div className={`p-4 rounded-lg border flex items-start gap-3 ${isCorrect ? 'bg-success/10 border-success/30' : 'bg-destructive/5 border-destructive/20'}`}>
+                                  {isCorrect ? <CheckCircle className="text-success shrink-0 mt-1" /> : <XCircle className="text-destructive shrink-0 mt-1" />}
                                   <div className="w-full">
-                                    <p className={`font-semibold ${isCorrect ? 'text-green-800' : 'text-red-800'}`}>
+                                    <p className={`font-semibold ${isCorrect ? 'text-success' : 'text-destructive'}`}>
                                       {isCorrect ? 'Correct Answer!' : 'Incorrect'}
                                     </p>
                                     {(!isCorrect && showExplanation) && (
-                                      <div className="text-red-800 mt-2 text-sm">
+                                      <div className="text-destructive mt-2 text-sm">
                                         <strong>Explanation:</strong>
-                                        <div className="mt-1 prose prose-sm max-w-none text-red-900">
+                                        <div className="mt-1 prose prose-sm max-w-none text-destructive/90">
                                           <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeRaw, rehypeKatex]}>
                                             {formatContent(mcqData.explanation)}
                                           </ReactMarkdown>
@@ -601,22 +590,22 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
 
                       const statusStyles = {
                         correct: {
-                          bg: 'bg-green-50',
-                          border: 'border-green-500',
-                          icon: <CheckCircle size={24} className="text-green-600 mt-1" />,
-                          title: 'text-green-800',
+                          bg: 'bg-success/10',
+                          border: 'border-success',
+                          icon: <CheckCircle size={24} className="text-success mt-1" />,
+                          title: 'text-success',
                         },
                         incorrect: {
-                          bg: 'bg-red-50',
-                          border: 'border-red-500',
-                          icon: <XCircle size={24} className="text-red-600 mt-1" />,
-                          title: 'text-red-800',
+                          bg: 'bg-destructive/5',
+                          border: 'border-destructive',
+                          icon: <XCircle size={24} className="text-destructive mt-1" />,
+                          title: 'text-destructive',
                         },
                         partial: {
-                          bg: 'bg-yellow-50',
-                          border: 'border-yellow-500',
-                          icon: <CheckCircle size={24} className="text-yellow-600 mt-1" />,
-                          title: 'text-yellow-800',
+                          bg: 'bg-warning/10',
+                          border: 'border-warning',
+                          icon: <CheckCircle size={24} className="text-warning mt-1" />,
+                          title: 'text-warning',
                         }
                       };
 
@@ -626,7 +615,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                         <div className="bg-white rounded-xl shadow-lg p-8">
                           <div className="mb-6">
                             <div className="flex items-center gap-2 mb-4">
-                              <div className={`w-8 h-8 ${status === 'incorrect' ? 'bg-red-600' : 'bg-green-600'} text-white rounded-full flex items-center justify-center font-bold`}>
+                              <div className={`w-8 h-8 ${status === 'incorrect' ? 'bg-destructive' : 'bg-success'} text-white rounded-full flex items-center justify-center font-bold`}>
                                 3
                               </div>
                               <h2 className="text-xl font-semibold text-gray-800">Assessment Feedback</h2>
@@ -733,7 +722,7 @@ function TopicInputForm({
       <button
         type="submit"
         disabled={!topicName.trim() || isSubmitting}
-        className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+        className="px-6 py-3 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap"
       >
         {isSubmitting ? (
           <>
@@ -743,7 +732,7 @@ function TopicInputForm({
         ) : (
           <>
             <Sparkles className="w-4 h-4" />
-            <span>START LEARNING</span>
+            <span>Start Learning</span>
           </>
         )}
       </button>
@@ -1066,71 +1055,98 @@ startxref
       </div>
 
       {/* Desktop Upload Composition (>= lg) */}
-      <div className="hidden lg:flex flex-1 min-h-0 w-full">
-        <div className="w-16 sm:w-20 bg-secondary flex flex-col items-center py-4 gap-3 flex-shrink-0">
+      <div className="hidden lg:flex flex-1 min-h-0 w-full bg-[#FAFAFC]">
+        <div className="w-60 bg-white border-r border-slate-200/80 flex flex-col py-6 px-4 gap-1 flex-shrink-0">
           <button
             onClick={() => navigate("/")}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-            title="Home"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
           >
-            <Home className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => handleTabChange("tutor")}
-            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "tutor" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
-              }`}
-            title="AI Tutor"
-          >
-            <GraduationCap className="w-5 h-5" />
+            <Home className="w-[18px] h-[18px]" />
+            Home
           </button>
           <button
             onClick={() => handleTabChange("learning")}
-            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "learning" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
-              }`}
-            title="Learning Hub"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
           >
-            <BookOpen className="w-5 h-5" />
+            <BarChart3 className="w-[18px] h-[18px]" />
+            My Learning
+          </button>
+          <button
+            onClick={() => handleTabChange("tutor")}
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+          >
+            <GraduationCap className="w-[18px] h-[18px]" />
+            AI Tutor
+          </button>
+          <button
+            onClick={() => handleTabChange("learning")}
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+          >
+            <Library className="w-[18px] h-[18px]" />
+            Library
           </button>
           <button
             onClick={() => handleTabChange("upload")}
-            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "upload" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
-              }`}
-            title="Upload Documents"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-50 text-indigo-700 transition-colors"
           >
-            <Upload className="w-5 h-5" />
+            <Upload className="w-[18px] h-[18px]" />
+            Upload
           </button>
           <button
             onClick={() => handleTabChange("assessment")}
-            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "assessment" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
-              }`}
-            title="Assessment"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
           >
-            <FileText className="w-5 h-5" />
+            <FileText className="w-[18px] h-[18px]" />
+            Assessments
+          </button>
+          <button
+            onClick={() => handleTabChange("assessment")}
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+          >
+            <TrendingUp className="w-[18px] h-[18px]" />
+            Progress
           </button>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto p-8">
-          <div className="max-w-4xl mx-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto p-10">
+          <div className="max-w-3xl mx-auto">
+            <h1 className="text-2xl font-bold text-slate-900 mb-1">Upload Documents</h1>
+            <p className="text-sm text-slate-500 mb-8">
+              Upload your study material and let LearnFordge turn it into a personalized learning experience.
+            </p>
+
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-2xl p-12 text-center transition-colors ${isDragging
+              className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-14 text-center transition-colors ${isDragging
                 ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/50 bg-muted/20"
+                : "border-border hover:border-primary/40 bg-secondary/30"
                 }`}
             >
-              <div className="mb-4">
-                <Upload
-                  size={48}
-                  className={`mx-auto ${isDragging ? "text-primary" : "text-muted-foreground"
-                    }`}
-                />
+              {/* Decorative floating file-type chips */}
+              <div className="hidden sm:flex absolute top-8 left-10 w-11 h-11 rounded-xl bg-white shadow-md border border-rose-100 items-center justify-center -rotate-6">
+                <FileText className="w-5 h-5 text-rose-500" />
               </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2">
+              <div className="hidden sm:flex absolute bottom-10 left-20 w-11 h-11 rounded-xl bg-white shadow-md border border-blue-100 items-center justify-center rotate-6">
+                <FileType className="w-5 h-5 text-blue-500" />
+              </div>
+              <div className="hidden sm:flex absolute top-10 right-12 w-11 h-11 rounded-xl bg-white shadow-md border border-amber-100 items-center justify-center rotate-6">
+                <Presentation className="w-5 h-5 text-amber-500" />
+              </div>
+              <div className="hidden sm:flex absolute bottom-8 right-20 w-11 h-11 rounded-xl bg-white shadow-md border border-purple-100 items-center justify-center -rotate-6">
+                <FileText className="w-5 h-5 text-purple-500" />
+              </div>
+
+              <div className="relative mb-4">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-100/80 text-indigo-600 flex items-center justify-center mx-auto">
+                  <UploadCloud className={`w-8 h-8 ${isDragging ? "text-indigo-700" : "text-indigo-600"}`} />
+                </div>
+              </div>
+              <h3 className="relative text-xl font-bold text-slate-900 mb-1">
                 Drop your files here
               </h3>
-              <p className="text-muted-foreground mb-6 font-light">
+              <p className="relative text-sm text-slate-500 mb-6">
                 or click to browse from your computer
               </p>
               <input
@@ -1143,33 +1159,35 @@ startxref
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-8 py-3 bg-[hsl(var(--button-lavender))] text-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                className="relative px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all inline-flex items-center gap-2"
               >
-                SELECT FILES
+                <FileText className="w-4 h-4" />
+                Select Files
               </button>
+              <p className="relative text-xs text-slate-400 mt-4">You can upload multiple files at once</p>
             </div>
 
             {/* Divider */}
             <div className="relative my-8">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border"></div>
+                <div className="w-full border-t border-slate-200"></div>
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-4 text-muted-foreground font-semibold tracking-wider">
-                  OR LEARN BY TOPIC NAME
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-[#FAFAFC] px-4 text-slate-400 font-semibold tracking-wider">
+                  OR
                 </span>
               </div>
             </div>
 
             {/* Topic Input Box */}
-            <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 via-purple-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md flex-shrink-0">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Don't have a PDF? Type a Topic Name</h3>
-                  <p className="text-xs text-gray-500">Instant AI learning module generation for any concept, subject, or question.</p>
+                  <h3 className="text-base font-bold text-slate-900">Don't have a PDF? Type a Topic Name</h3>
+                  <p className="text-xs text-slate-500">Instant AI learning module generation for any concept, subject, or question.</p>
                 </div>
               </div>
 
@@ -1273,20 +1291,38 @@ startxref
               </div>
             )}
 
-            <div className="mt-8 space-y-6">
-              <div className="rounded-lg p-6 border border-border bg-muted/20">
-                <h4 className="font-semibold text-foreground mb-4">Supported Formats</h4>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <span className="text-primary font-bold">✓</span> PDF files
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-primary font-bold">✓</span> Max 50MB per file
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-primary font-bold">✓</span> Multiple files
-                  </li>
-                </ul>
+            <div className="mt-8 rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">Supported Formats</h4>
+                  <p className="text-xs text-slate-500">Upload files in the following formats. We'll analyze and structure your content automatically.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-xl bg-rose-50/60 border border-rose-100 p-4">
+                  <div className="w-9 h-9 rounded-lg bg-white text-rose-500 flex items-center justify-center shadow-xs mb-3">
+                    <FileText className="w-4.5 h-4.5" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-900">PDF files</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Best for textbooks, lecture notes</p>
+                </div>
+                <div className="rounded-xl bg-emerald-50/60 border border-emerald-100 p-4">
+                  <div className="w-9 h-9 rounded-lg bg-white text-emerald-600 flex items-center justify-center shadow-xs mb-3">
+                    <FileType className="w-4.5 h-4.5" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-900">Max 50MB per file</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Upload multiple files at once</p>
+                </div>
+                <div className="rounded-xl bg-purple-50/60 border border-purple-100 p-4">
+                  <div className="w-9 h-9 rounded-lg bg-white text-purple-600 flex items-center justify-center shadow-xs mb-3">
+                    <Library className="w-4.5 h-4.5" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-900">Multiple files</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Combine related materials</p>
+                </div>
               </div>
             </div>
           </div>
@@ -1779,12 +1815,17 @@ startxref
     // two views silently drifting apart.
     const renderSummaryWithImages = () => {
       if (textLoading) {
+        // Content-shaped skeleton instead of a bare spinner - the summary
+        // is paragraph text, so the loading state should look like
+        // paragraph text arriving, not an unrelated spinning circle.
         return (
-          <div className="bg-white rounded-lg p-4 border">
-            <div className="flex items-center justify-center py-8">
-              <div className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
-              <span className="ml-3 text-sm text-gray-600">Loading summary...</span>
+          <div className="bg-white rounded-lg p-4 border space-y-6">
+            <SkeletonText lines={4} />
+            <div className="grid grid-cols-2 gap-4">
+              <Skeleton className="h-28 rounded-lg" />
+              <Skeleton className="h-28 rounded-lg" />
             </div>
+            <SkeletonText lines={3} />
           </div>
         );
       }
@@ -1891,9 +1932,13 @@ startxref
       <div className="space-y-3">
         <h5 className="font-semibold text-gray-800">Reference Links</h5>
         {linksLoading ? (
-          <div className="flex items-center justify-center py-4">
-            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <span className="ml-2 text-sm text-gray-600">Loading links...</span>
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="p-3 bg-white rounded-lg border space-y-2">
+                <Skeleton className="h-3.5 w-2/3" />
+                <Skeleton className="h-3 w-full" />
+              </div>
+            ))}
           </div>
         ) : referenceLinks.length > 0 ? (
           <div className="space-y-2">
@@ -2483,7 +2528,7 @@ startxref
             </div>
           )}
 
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+          <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center">
             A
           </div>
         </div>

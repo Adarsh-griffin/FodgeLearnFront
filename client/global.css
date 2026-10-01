@@ -50,6 +50,18 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
 
+    /* Semantic status colors - previously every "correct answer" or
+       "quota warning" surface reached for a raw Tailwind green/amber
+       class or a hardcoded hex (see the old .correct-box/.incorrect-box
+       rules below), untethered from the brand palette. These are the one
+       source of truth for success/warning/info everywhere. */
+    --success: 142 71% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 20 60% 15%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
     --border: 229 20% 90%;
     --input: 229 20% 95%;
     --ring: 229 100% 65%;
@@ -111,6 +123,13 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
+    --success: 142 60% 50%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 58%;
+    --warning-foreground: 20 60% 15%;
+    --info: 199 80% 58%;
+    --info-foreground: 0 0% 100%;
+
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
@@ -171,6 +190,34 @@
     select {
       font-size: 16px !important;
     }
+  }
+}
+
+/* Type scale - headings/body text were previously picked ad hoc per
+   component (text-xl, text-2xl, text-3xl mixed with no rule, different
+   weights for the same visual rank). These are the one source of truth;
+   use them instead of guessing a Tailwind size+weight combo. */
+@layer components {
+  .text-display {
+    @apply text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.1];
+  }
+  .text-h1 {
+    @apply text-2xl sm:text-3xl font-extrabold tracking-tight leading-snug;
+  }
+  .text-h2 {
+    @apply text-xl sm:text-2xl font-bold tracking-tight leading-snug;
+  }
+  .text-h3 {
+    @apply text-base sm:text-lg font-bold leading-snug;
+  }
+  .text-body {
+    @apply text-sm sm:text-base font-normal leading-relaxed;
+  }
+  .text-small {
+    @apply text-xs sm:text-sm font-normal leading-normal;
+  }
+  .text-caption {
+    @apply text-[11px] font-semibold uppercase tracking-wider;
   }
 }
 
@@ -780,7 +827,11 @@
 }
 
 
-/* Custom styling for Student-Friendly Pointers */
+/* Custom styling for Student-Friendly Pointers - retheme of a previously
+   hardcoded-hex block (#2d3436, #27ae60, #e74c3c, #f39c12, #007bff, #1a1a1a),
+   completely untethered from the brand palette, onto the semantic tokens
+   above. .correct-box/.incorrect-box (also formerly hardcoded) were removed
+   entirely - confirmed unused anywhere in the codebase. */
 .response-container ul {
   margin: 10px 0;
   padding-left: 1.5rem !important;
@@ -788,17 +839,14 @@
 }
 
 .response-container li {
-list-style-type: none !important;
-position: relative;
-margin-bottom: 12px;
-padding-left: 5px;
-line-height: 1.6;
-color: #2d3436;
-font-size: 1rem;
+  list-style-type: none !important;
+  position: relative;
+  margin-bottom: 12px;
+  padding-left: 5px;
+  line-height: 1.6;
+  color: hsl(var(--foreground));
+  font-size: 1rem;
 }
-
-
-
 
 /* Smooth transition for the appearance of the list */
 .response-container {
@@ -820,28 +868,21 @@ font-size: 1rem;
 }
 
 /* Feedback specific colors */
-/* Feedback specific colors */
 .response-container.correct li::before {
-  color: #27ae60 !important;
-  /* Green for success */
+  color: hsl(var(--success)) !important;
 }
 
 .response-container.incorrect li::before {
-  color: #e74c3c !important;
-  /* Red for errors */
+  color: hsl(var(--destructive)) !important;
 }
 
 .response-container.hint li::before {
-  color: #f39c12 !important;
-  /* Orange for hints */
+  color: hsl(var(--warning)) !important;
 }
-
-
 
 .response-container li::before {
   content: "•";
-  /* The bullet character */
-  color: #007bff;
+  color: hsl(var(--primary));
   font-weight: bold;
   display: inline-block;
   width: 1em;
@@ -851,22 +892,5 @@ font-size: 1rem;
 /* Fallback: if stars still show up, this helps clean the look */
 .response-container strong {
   font-weight: 700;
-  color: #1a1a1a;
-}
-
-.incorrect-box {
-    border-left: 6px solid #e74c3c !important;
-    background-color: #fff5f5 !important;
-    padding: 15px;
-    border-radius: 4px;
-    margin-top: 10px;
-}
-
-/* Green theme for Correct answers */
-.correct-box {
-    border-left: 6px solid #27ae60 !important;
-    background-color: #f0fff4 !important;
-    padding: 15px;
-    border-radius: 4px;
-    margin-top: 10px;
+  color: hsl(var(--foreground));
 }

@@ -56,7 +56,7 @@ export function AuthGateModal({
           <SignInButton mode="modal" forceRedirectUrl="/study">
             <button
               onClick={onClose}
-              className="w-full px-6 py-3 gradient-brand text-white rounded-xl font-semibold hover:opacity-95 active:scale-[0.98] transition-all"
+              className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all"
             >
               Sign In
             </button>

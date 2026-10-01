@@ -546,6 +546,21 @@ class ApiService {
   // site with getTutorAuthHeaders() from client/lib/identity.ts.
 
   /**
+   * Whether this identity (Clerk user or anonymous id) has ANY saved AI
+   * Tutor progress at all - used by Home/Navigation to decide "Continue
+   * Learning" vs "Start Now"/"Get Started" against real backend state,
+   * not just "is this browser identified" (see useReturningStatus).
+   */
+  async getHasTutorProfile(authHeaders: Record<string, string>): Promise<boolean> {
+    const response = await fetch(`${this.baseURL}/api/tutor/has-profile`, {
+      headers: authHeaders,
+    });
+    if (!response.ok) return false;
+    const data = await response.json().catch(() => ({}));
+    return !!data.hasProfile;
+  }
+
+  /**
    * Lets TutorTab resume wherever this student left off for this document
    * (roadmap or an in-progress lesson) instead of always restarting at
    * onboarding when the tab remounts - see test_groq.py's /api/tutor/progress

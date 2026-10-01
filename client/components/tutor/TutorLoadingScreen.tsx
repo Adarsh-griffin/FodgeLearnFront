@@ -26,32 +26,20 @@ export function TutorLoadingScreen({ message, subMessages }: TutorLoadingScreenP
   }, [subMessages]);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-6 bg-[#FAFAFC] px-8 text-center">
-      <div className="relative w-20 h-20 flex items-center justify-center">
-        <span className="absolute inset-0 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-400 opacity-25 animate-ping" />
-        <span className="absolute inset-1.5 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-400 opacity-30 blur-md animate-pulse" />
-        <span className="relative w-14 h-14 rounded-full bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 shadow-lg flex items-center justify-center">
-          <Sparkles className="w-6 h-6 text-white animate-pulse" />
-        </span>
+    <div className="flex-1 flex flex-col items-center justify-center gap-5 bg-[#FAFAFC] px-8 text-center">
+      <div className="relative w-14 h-14 flex items-center justify-center">
+        <div className="absolute inset-0 rounded-full border-2 border-primary/20" />
+        <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <Sparkles className="w-5 h-5 text-primary" />
       </div>
 
-      <div className="space-y-2 min-h-[2.5rem]">
-        <p className="text-sm font-bold text-slate-800">{message}</p>
+      <div className="space-y-1.5 min-h-[2.5rem]">
+        <p className="text-sm font-semibold text-foreground">{message}</p>
         {subMessages && (
-          <p key={subIndex} className="text-xs text-slate-400 font-medium animate-in fade-in duration-500">
+          <p key={subIndex} className="text-xs text-muted-foreground animate-in fade-in duration-500">
             {subMessages[subIndex]}
           </p>
         )}
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce"
-            style={{ animationDelay: `${i * 0.15}s` }}
-          />
-        ))}
       </div>
     </div>
   );

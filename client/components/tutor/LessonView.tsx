@@ -777,14 +777,14 @@ export function LessonView({
               <div
                 className={`p-4 rounded-xl border flex items-start gap-3 ${
                   feedback.understood
-                    ? "bg-emerald-50/90 border-emerald-200 text-emerald-950"
-                    : "bg-amber-50/90 border-amber-200 text-amber-950"
+                    ? "bg-success/10 border-success/30 text-foreground"
+                    : "bg-warning/10 border-warning/30 text-foreground"
                 }`}
               >
                 {feedback.understood ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle2 className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
                 ) : (
-                  <XCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <XCircle className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
                 )}
                 <div className="space-y-1">
                   <p className="text-xs font-extrabold uppercase tracking-wider">

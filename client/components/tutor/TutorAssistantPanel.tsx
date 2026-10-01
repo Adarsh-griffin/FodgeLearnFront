@@ -182,27 +182,27 @@ export function TutorAssistantPanel({
           <Sparkles className="w-4 h-4 text-indigo-600" />
           <span className="font-bold text-slate-900 text-sm">AI Tutor</span>
         </div>
-        <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-bold border border-indigo-100">
+        <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20">
           Beta
         </span>
       </div>
 
       {/* AI Tutor Card */}
       <div className="p-4 border-b border-slate-100">
-        <div className="rounded-2xl bg-gradient-to-br from-indigo-50/80 via-white to-indigo-50/40 border border-indigo-100/80 p-5 flex flex-col items-center text-center shadow-xs">
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 p-0.5 shadow-md mb-3">
+        <div className="rounded-2xl bg-secondary/60 border border-border p-5 flex flex-col items-center text-center">
+          <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-primary/30 mb-3">
             <div className="w-full h-full rounded-full bg-white overflow-hidden flex items-center justify-center">
               <img src="/animated-video.gif" alt="AI Tutor Avatar" className="w-full h-full object-cover" />
             </div>
           </div>
-          
-          <p className="text-slate-900 font-bold text-sm">Your AI Tutor</p>
-          <p className="text-slate-500 text-xs mt-0.5">Let's understand this concept step by step.</p>
+
+          <p className="text-foreground font-bold text-sm">Your AI Tutor</p>
+          <p className="text-muted-foreground text-xs mt-0.5">Let's understand this concept step by step.</p>
 
           <button
             onClick={handleListenExplanation}
             disabled={!currentExplanation || isListening}
-            className="mt-3.5 w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition-all shadow-xs"
+            className="mt-3.5 w-full flex items-center justify-center gap-2 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded-xl text-xs font-semibold transition-all"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             {isListening ? "Loading audio..." : speakingId === "explanation" ? "Playing..." : "Watch explanation (5 min)"}

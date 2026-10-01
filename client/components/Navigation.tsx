@@ -1,18 +1,16 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@clerk/react";
-import { hasAnonymousId } from "@/lib/identity";
 import { AuthGateModal } from "@/components/AuthGateModal";
+import { useReturningStatus } from "@/lib/useReturningStatus";
 
 export function Navigation() {
-  const { isSignedIn } = useAuth();
   const navigate = useNavigate();
   const [showAuthGate, setShowAuthGate] = useState(false);
-  // A signed-in (or previously guest-identified) user has already been
-  // through onboarding - "Start Now" implied starting over, forcing them
-  // to redo the auth-gate/document flow every time they came back to the
-  // homepage instead of just resuming their session.
-  const isReturning = isSignedIn || hasAnonymousId();
+  // Backed by actual saved AI Tutor progress on the server, not just "is
+  // this browser identified" - see useReturningStatus for why that
+  // distinction matters (deleting student_profiles in Mongo should send a
+  // student back through the auth gate, not silently resume nothing).
+  const isReturning = useReturningStatus();
 
   // This used to be a plain <Link to="/study">, which sent a first-time
   // visitor straight into the app with no sign-in/guest choice at all -
@@ -38,7 +36,7 @@ export function Navigation() {
             {/* Always visible - there's only one nav action, so no hamburger needed */}
             <button
               onClick={handleStartNow}
-              className="px-4 sm:px-5 py-2 gradient-brand text-white rounded-full text-sm sm:text-base font-semibold hover:opacity-90 active:scale-[0.98] transition-all shadow-sm"
+              className="px-4 sm:px-5 py-2 bg-primary text-primary-foreground rounded-xl text-sm sm:text-base font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all"
             >
               {isReturning ? "Continue Learning" : "Start Now"}
             </button>

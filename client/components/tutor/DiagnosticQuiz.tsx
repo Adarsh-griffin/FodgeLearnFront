@@ -156,7 +156,7 @@ export function DiagnosticQuiz({ fileId, goal, getAuthHeaders, onComplete }: Dia
                 "p-3.5 sm:p-4 rounded-xl border-2 text-left text-sm sm:text-base transition-all border-border hover:border-primary/40 hover:bg-secondary text-foreground";
               if (answered) {
                 if (opt.key === answered.correctKey) {
-                  className = "p-3.5 sm:p-4 rounded-xl border-2 text-left text-sm sm:text-base border-green-500 bg-green-50 text-green-900";
+                  className = "p-3.5 sm:p-4 rounded-xl border-2 text-left text-sm sm:text-base border-success bg-success/10 text-foreground";
                 } else if (opt.key === answered.selectedKey) {
                   className = "p-3.5 sm:p-4 rounded-xl border-2 text-left text-sm sm:text-base border-destructive bg-destructive/10 text-destructive";
                 } else {
@@ -180,7 +180,7 @@ export function DiagnosticQuiz({ fileId, goal, getAuthHeaders, onComplete }: Dia
           {answered && (
             <div
               className={`mt-4 p-3 rounded-lg text-sm flex items-start gap-2 ${
-                answered.correct ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-900"
+                answered.correct ? "bg-success/10 text-foreground" : "bg-warning/10 text-foreground"
               }`}
             >
               {answered.correct ? (
@@ -202,7 +202,7 @@ export function DiagnosticQuiz({ fileId, goal, getAuthHeaders, onComplete }: Dia
             <div className="mt-6 flex justify-end">
               <button
                 onClick={handleContinue}
-                className="px-6 py-2.5 gradient-brand text-white rounded-xl font-semibold hover:opacity-95 active:scale-[0.98] transition-all"
+                className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all"
               >
                 Continue
               </button>
