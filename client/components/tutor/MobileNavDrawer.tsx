@@ -1,14 +1,12 @@
-import { 
-  X, 
-  Home, 
-  BookOpen, 
-  GraduationCap, 
-  Library, 
-  Upload, 
-  FileText, 
-  BarChart3, 
-  CheckCircle2, 
-  Circle, 
+import {
+  X,
+  Home,
+  BookOpen,
+  GraduationCap,
+  Upload,
+  FileText,
+  CheckCircle2,
+  Circle,
   FileCheck,
   RotateCcw
 } from "lucide-react";
@@ -41,15 +39,22 @@ export function MobileNavDrawer({
 
   const navItems = [
     { id: "home", label: "Home", icon: Home, action: () => { navigate("/"); onClose(); } },
-    { id: "learning", label: "My Learning", icon: BookOpen, action: () => { handleTabChange("learning"); onClose(); } },
-    { id: "tutor", label: "AI Tutor", icon: GraduationCap, action: () => { handleTabChange("tutor"); onClose(); } },
-    { id: "library", label: "Library", icon: Library, action: () => { handleTabChange("learning"); onClose(); } },
     { id: "upload", label: "Upload", icon: Upload, action: () => { handleTabChange("upload"); onClose(); } },
+    { id: "tutor", label: "AI Tutor", icon: GraduationCap, action: () => { handleTabChange("tutor"); onClose(); } },
+    { id: "learning", label: "Summary", icon: BookOpen, action: () => { handleTabChange("learning"); onClose(); } },
     { id: "assessment", label: "Assessments", icon: FileText, action: () => { handleTabChange("assessment"); onClose(); } },
-    { id: "progress", label: "Progress", icon: BarChart3, action: () => { handleTabChange("learning"); onClose(); } },
   ];
 
   const currentIndex = plan?.steps.findIndex((s) => s.topic_id === currentTopicId) ?? -1;
+
+  // Typed-topic sessions are backed by a synthetic placeholder PDF
+  // (see `createMinimalPdfBlob` in Study.tsx, named "<topic>_topic.pdf")
+  // rather than a real uploaded file - don't show a PDF icon/page count
+  // for something the user never actually uploaded.
+  const isTypedTopic = !!fileName?.endsWith("_topic.pdf");
+  const displayName = isTypedTopic
+    ? fileName!.replace(/_topic\.pdf$/, "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    : fileName;
 
   return (
     <div className="lg:hidden fixed inset-0 z-50 flex select-none">
@@ -69,7 +74,7 @@ export function MobileNavDrawer({
         <div className="p-3 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = item.id === "tutor" ? activeTab === "tutor" : false;
+            const isActive = item.id === activeTab;
             return (
               <button
                 key={item.id}
@@ -89,17 +94,23 @@ export function MobileNavDrawer({
 
         <div className="my-2 mx-4 border-t border-slate-150" />
 
-        {/* Current Document */}
+        {/* Current Document / Topic */}
         <div className="px-4 py-2">
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Document</p>
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+            {isTypedTopic ? "Current Topic" : "Current Document"}
+          </p>
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/60 flex flex-col gap-2">
-            <div className="flex items-start gap-2.5">
-              <FileCheck className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-slate-800 truncate">{fileName || "rag_topic.pdf"}</p>
-                <p className="text-[11px] text-slate-400">152 pages • PDF</p>
+            {isTypedTopic ? (
+              <p className="text-xs font-semibold text-slate-800 truncate">{displayName}</p>
+            ) : (
+              <div className="flex items-start gap-2.5">
+                <FileCheck className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-slate-800 truncate">{displayName || "rag_topic.pdf"}</p>
+                  <p className="text-[11px] text-slate-400">152 pages • PDF</p>
+                </div>
               </div>
-            </div>
+            )}
             {onChangeDocument && (
               <button
                 onClick={() => { onChangeDocument(); onClose(); }}

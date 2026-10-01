@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap, HelpCircle, BarChart3, ArrowRight, Lightbulb, Library, UploadCloud, Presentation, FileType } from "lucide-react";
+import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap, HelpCircle, BarChart3, ArrowRight, Lightbulb, Library, UploadCloud, Presentation, FileType, Search, Send, Mic, Square } from "lucide-react";
 import { TutorTab } from "@/components/tutor/TutorTab";
+import { TutorSidebar } from "@/components/tutor/TutorSidebar";
 import { UserMenu } from "@/components/UserMenu";
 import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
 import { MobileUploadView } from "@/components/tutor/MobileUploadView";
@@ -14,7 +15,7 @@ import rehypeRaw from 'rehype-raw';
 import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import 'katex/dist/katex.min.css';
-import { Mic, Square } from "lucide-react";
+import { AILearningLoader } from "@/components/ui/AILearningLoader";
 
 
 type AssessmentState = 'welcome' | 'question' | 'answer' | 'feedback';
@@ -163,7 +164,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
           <button
             onClick={() => handleTabChange("learning")}
             className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-            title="Learning Hub"
+            title="Summary"
           >
             <BookOpen className="w-5 h-5" />
           </button>
@@ -1068,11 +1069,11 @@ startxref
             Home
           </button>
           <button
-            onClick={() => handleTabChange("learning")}
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+            onClick={() => handleTabChange("upload")}
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-primary/10 text-primary transition-colors"
           >
-            <BookOpen className="w-[18px] h-[18px]" />
-            Summary
+            <Upload className="w-[18px] h-[18px]" />
+            Upload
           </button>
           <button
             onClick={() => handleTabChange("tutor")}
@@ -1082,11 +1083,11 @@ startxref
             AI Tutor
           </button>
           <button
-            onClick={() => handleTabChange("upload")}
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-primary/10 text-primary transition-colors"
+            onClick={() => handleTabChange("learning")}
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
           >
-            <Upload className="w-[18px] h-[18px]" />
-            Upload
+            <BookOpen className="w-[18px] h-[18px]" />
+            Summary
           </button>
           <button
             onClick={() => handleTabChange("assessment")}
@@ -1728,11 +1729,11 @@ startxref
       }
     };
 
-    const sendTextMessage = async () => {
-      if (!currentMessage.trim()) return;
+    const sendTextMessage = async (textToSend?: string) => {
+      const userMessage = (textToSend || currentMessage).trim();
+      if (!userMessage) return;
 
       setIsProcessing(true);
-      const userMessage = currentMessage;
       setCurrentMessage('');
 
       // Add user message to chat
@@ -2061,47 +2062,12 @@ startxref
     return (
       <div className="h-full w-full flex flex-col min-h-0">
         <div className="flex-1 flex min-h-0">
-          <div className="hidden lg:flex w-16 sm:w-20 bg-secondary flex-col items-center py-4 gap-3 flex-shrink-0">
-            <button
-              onClick={() => navigate("/")}
-              className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors text-muted-foreground hover:bg-card hover:text-foreground"
-              title="Home"
-            >
-              <Home className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => handleTabChange("tutor")}
-              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "tutor" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
-                }`}
-              title="AI Tutor"
-            >
-              <GraduationCap className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => handleTabChange("learning")}
-              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "learning" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
-                }`}
-              title="Learning Hub"
-            >
-              <BookOpen className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => handleTabChange("upload")}
-              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "upload" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
-                }`}
-              title="Upload Documents"
-            >
-              <Upload className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => handleTabChange("assessment")}
-              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors ${activeTab === "assessment" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-card hover:text-foreground"
-                }`}
-              title="Assessment"
-            >
-              <FileText className="w-5 h-5" />
-            </button>
-          </div>
+          <TutorSidebar
+            activeTab="learning"
+            handleTabChange={handleTabChange}
+            navigate={navigate}
+            fileName={selectedFile || null}
+          />
 
           <div className="flex-1 flex flex-col min-h-0">
             {/* Desktop: resizable 3-column layout (Video+Links / AI Summary / AI Tutor chat) */}
@@ -2213,194 +2179,213 @@ startxref
               ></div>
 
               <div
-                className="border-r border-gray-200 flex flex-col min-w-0 min-h-0"
+                className="border-r border-gray-200 flex flex-col min-w-0 min-h-0 bg-slate-50/50"
                 style={{ width: `${sectionWidths[1]}%` }}
               >
-                <div className="p-4 border-b border-gray-200 bg-primary/5 flex-shrink-0">
+                {/* Panel Header */}
+                <div className="p-3.5 sm:p-4 border-b border-slate-200 bg-white flex-shrink-0">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-gray-800">AI Tutor</h4>
+                    <h4 className="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      <span>AI Tutor</span>
+                    </h4>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">Saved</span>
-                      <div className="w-6 h-6 bg-gray-300 rounded flex items-center justify-center">
-                        <span className="text-xs">🔔</span>
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                        Saved
+                      </span>
+                      <div className="w-6 h-6 bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 text-xs">
+                        🔔
                       </div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full cursor-col-resize"></div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex-1 bg-primary/5 flex flex-col min-h-0">
-                  {/* File Selector - Fixed at top */}
-                  <div className="p-4 pb-2 bg-primary/5 flex-shrink-0">
-                    <div className="bg-white rounded-lg p-3 border">
-                      <div className="flex items-center gap-3">
-                        <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                          Ask about:
-                        </label>
-                        <select
-                          value={selectedFile}
-                          onChange={(e) => setSelectedFile(e.target.value)}
-                          disabled={filesLoading}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                        >
-                          {filesLoading ? (
-                            <option>Loading files...</option>
-                          ) : availableFiles.length > 0 ? (
-                            availableFiles.map((file) => (
-                              <option key={file} value={file}>
-                                {file}
-                              </option>
-                            ))
-                          ) : (
-                            <option>No files available</option>
-                          )}
-                        </select>
-                        <button
-                          onClick={async () => {
-                            setFilesLoading(true);
-                            try {
-                              // Clear cache and force fresh fetch
-                              localStorage.removeItem('neurolearn_available_files');
-                              localStorage.removeItem('neurolearn_files_timestamp');
-
-                              const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/files`);
-                              if (response.ok) {
-                                // See loadAvailableFiles above - /api/files now returns objects.
-                                const fileObjects: { originalName: string }[] = await response.json();
-                                const fileList = fileObjects.map((f) => f.originalName).filter(Boolean);
-                                setAvailableFiles(fileList);
-                                // Update selected file if current one is no longer available
-                                if (fileList.length > 0 && !fileList.includes(selectedFile)) {
-                                  setSelectedFile(fileList[0]);
-                                }
-
-                                // Cache the new files
-                                const now = Date.now();
-                                localStorage.setItem('neurolearn_available_files', JSON.stringify(fileList));
-                                localStorage.setItem('neurolearn_files_timestamp', now.toString());
-                              }
-                            } catch (error) {
-                              console.error('Error refreshing files:', error);
-                            } finally {
-                              setFilesLoading(false);
-                            }
-                          }}
-                          disabled={filesLoading}
-                          className="text-xs px-2 py-1 bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors disabled:opacity-50"
-                          title="Refresh file list"
-                        >
-                          🔄
-                        </button>
-                        {selectedFile && (
-                          <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                            {availableFiles.indexOf(selectedFile) + 1} of {availableFiles.length}
-                          </div>
+                {/* Main Scrollable Panel Body */}
+                <div ref={chatScrollRef} className="flex-1 p-4 overflow-y-auto min-h-0 space-y-4 hide-scrollbar">
+                  
+                  {/* File Selector */}
+                  <div className="bg-white rounded-2xl p-3 border border-slate-200/90 shadow-2xs">
+                    <div className="flex items-center gap-3">
+                      <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
+                        Ask about:
+                      </label>
+                      <select
+                        value={selectedFile}
+                        onChange={(e) => setSelectedFile(e.target.value)}
+                        disabled={filesLoading}
+                        className="flex-1 px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 bg-slate-50/50"
+                      >
+                        {filesLoading ? (
+                          <option>Loading files...</option>
+                        ) : availableFiles.length > 0 ? (
+                          availableFiles.map((file) => (
+                            <option key={file} value={file}>
+                              {file}
+                            </option>
+                          ))
+                        ) : (
+                          <option>No files available</option>
                         )}
-                      </div>
+                      </select>
+                      <button
+                        onClick={async () => {
+                          setFilesLoading(true);
+                          try {
+                            localStorage.removeItem('neurolearn_available_files');
+                            localStorage.removeItem('neurolearn_files_timestamp');
+                            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/files`);
+                            if (response.ok) {
+                              const fileObjects: { originalName: string }[] = await response.json();
+                              const fileList = fileObjects.map((f) => f.originalName).filter(Boolean);
+                              setAvailableFiles(fileList);
+                              if (fileList.length > 0 && !fileList.includes(selectedFile)) {
+                                setSelectedFile(fileList[0]);
+                              }
+                            }
+                          } catch (error) {
+                            console.error('Error refreshing files:', error);
+                          } finally {
+                            setFilesLoading(false);
+                          }
+                        }}
+                        disabled={filesLoading}
+                        className="text-xs p-1.5 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 transition-colors disabled:opacity-50"
+                        title="Refresh file list"
+                      >
+                        🔄
+                      </button>
+                      {selectedFile && (
+                        <div className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">
+                          {availableFiles.indexOf(selectedFile) + 1} of {availableFiles.length}
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Chat Messages - Scrollable area */}
-                  <div ref={chatScrollRef} className="flex-1 p-4 pt-2 overflow-y-auto min-h-0 hide-scrollbar">
-                    <div className="space-y-3">
-                      {chatMessages.map((message) => (
+
+                  {/* Working Input Search Bar */}
+                  <div className="bg-white rounded-2xl border border-slate-300 p-2 shadow-2xs focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary transition-all">
+                    <div className="flex items-center gap-2">
+                      <Search className="w-5 h-5 text-slate-400 ml-2 flex-shrink-0" />
+                      <input
+                        type="text"
+                        placeholder="Ask a question about this topic..."
+                        value={currentMessage}
+                        onChange={(e) => setCurrentMessage(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && !isProcessing && currentMessage.trim()) {
+                            sendTextMessage();
+                          }
+                        }}
+                        disabled={isProcessing}
+                        className="flex-1 py-1.5 px-1 bg-transparent text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none disabled:opacity-50 font-medium"
+                      />
+
+                      {/* Mic Button */}
+                      {!isRecording ? (
+                        <button
+                          onClick={startRecording}
+                          disabled={isProcessing}
+                          className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors disabled:opacity-50 flex items-center justify-center flex-shrink-0 cursor-pointer"
+                          title="Start voice recording"
+                        >
+                          <Mic className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={stopRecording}
+                          className="w-8 h-8 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center animate-pulse flex-shrink-0 cursor-pointer"
+                          title="Stop recording"
+                        >
+                          <Square className="w-4 h-4" />
+                        </button>
+                      )}
+
+                      {/* Send Button */}
+                      <button
+                        onClick={() => sendTextMessage()}
+                        disabled={isProcessing || !currentMessage.trim()}
+                        className="w-9 h-9 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/90 transition-all shadow-2xs disabled:opacity-40 flex-shrink-0 cursor-pointer"
+                        title="Send message"
+                      >
+                        <Send className="w-4 h-4 ml-0.5" />
+                      </button>
+                    </div>
+
+                    {/* Recording Status */}
+                    {isRecording && (
+                      <div className="mt-2 text-center pb-1">
+                        <p className="text-xs text-red-600 flex items-center justify-center gap-1 font-semibold">
+                          <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></span>
+                          Recording... Click stop when done
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick Suggestion Chips */}
+                  <div className="flex flex-wrap gap-2 pt-0.5">
+                    {[
+                      "Explain simply",
+                      "Give an example",
+                      "Show diagram",
+                      "Quiz me",
+                      "Explain differently",
+                      "Real-world analogy"
+                    ].map((chipText, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => sendTextMessage(chipText)}
+                        disabled={isProcessing}
+                        className="px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                      >
+                        {chipText}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Responses & Answer Messages Container */}
+                  <div className="space-y-4 pt-2">
+                    {chatMessages.length === 0 ? (
+                      <div className="p-4 rounded-2xl bg-white border border-slate-200/90 text-center space-y-1 shadow-2xs">
+                        <p className="text-xs font-bold text-slate-700">Heyy any doubts about {selectedFile || "this topic"}?</p>
+                        <p className="text-[11px] text-slate-400 font-mono">{new Date().toLocaleTimeString()}</p>
+                      </div>
+                    ) : (
+                      chatMessages.map((message) => (
                         <div
                           key={message.id}
                           className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-[80%] rounded-lg px-3 py-2 ${message.type === 'user'
-                              ? 'bg-primary text-white'
-                              : 'bg-white text-gray-800 border'
-                              }`}
+                            className={`max-w-[85%] rounded-2xl p-4 shadow-2xs ${
+                              message.type === 'user'
+                                ? 'bg-primary text-white font-medium'
+                                : 'bg-white text-slate-800 border border-slate-200/90'
+                            }`}
                           >
-                            <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
-                              <div className="response-container">
-                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeRaw, rehypeKatex]}>
-                                  {message.content}
-                                </ReactMarkdown>
-                              </div>
+                            <div className="text-xs sm:text-sm prose prose-slate max-w-none">
+                              <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeRaw, rehypeKatex]}>
+                                {message.content}
+                              </ReactMarkdown>
                             </div>
-                            <p className={`text-xs mt-1 ${message.type === 'user' ? 'text-primary/10' : 'text-gray-500'
-                              }`}>
+                            <p className={`text-[10px] mt-1.5 font-mono ${message.type === 'user' ? 'text-white/70' : 'text-slate-400'}`}>
                               {message.timestamp.toLocaleTimeString()}
                             </p>
                           </div>
                         </div>
-                      ))}
-                      {isProcessing && (
-                        <div className="flex justify-start">
-                          <div className="bg-white rounded-lg px-3 py-2 border">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Type your question..."
-                      value={currentMessage}
-                      onChange={(e) => setCurrentMessage(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter' && !isProcessing) {
-                          sendTextMessage();
-                        }
-                      }}
-                      disabled={isProcessing}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                    />
-
-                    {/* Mic Button */}
-                    {!isRecording ? (
-                      <button
-                        onClick={startRecording}
-                        disabled={isProcessing}
-                        className="w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center"
-                        title="Start voice recording"
-                      >
-                        <Mic className="w-4 h-4" />
-
-                      </button>
-                    ) : (
-                      <button
-                        onClick={stopRecording}
-                        className="w-8 h-8 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center animate-pulse"
-                        title="Stop recording"
-                      >
-                        <Square className="w-4 h-4" />
-
-                      </button>
+                      ))
                     )}
 
-                    {/* Send Button */}
-                    <button
-                      onClick={sendTextMessage}
-                      disabled={isProcessing || !currentMessage.trim()}
-                      className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
-                      title="Send message"
-                    >
-                      <span className="text-sm">↑</span>
-                    </button>
+                    {isProcessing && (
+                      <div className="flex justify-start">
+                        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs flex items-center justify-center w-full">
+                          <AILearningLoader size="sm" message="AI Tutor is analyzing & generating answer..." />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Recording Status */}
-                  {isRecording && (
-                    <div className="mt-2 text-center">
-                      <p className="text-xs text-red-600 flex items-center justify-center gap-1">
-                        <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
-                        Recording... Click stop when done
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -2500,7 +2485,7 @@ startxref
           <div className="h-4 w-px bg-slate-200"></div>
           <h1 className="text-sm font-bold text-slate-800 truncate">
             {activeTab === "upload" ? "Upload Documents" :
-              activeTab === "learning" ? "Learning Hub" :
+              activeTab === "learning" ? "Summary" :
                 activeTab === "assessment" ? "Assessment" :
                   "AI Tutor"}
           </h1>

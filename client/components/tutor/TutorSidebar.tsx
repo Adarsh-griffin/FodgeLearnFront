@@ -1,13 +1,11 @@
-import { 
-  Home, 
-  BookOpen, 
-  GraduationCap, 
-  Library, 
-  Upload, 
-  FileText, 
-  BarChart3, 
-  CheckCircle2, 
-  Circle, 
+import {
+  Home,
+  BookOpen,
+  GraduationCap,
+  Upload,
+  FileText,
+  CheckCircle2,
+  Circle,
   FileCheck,
   RotateCcw
 } from "lucide-react";
@@ -35,15 +33,22 @@ export function TutorSidebar({
 }: TutorSidebarProps) {
   const navItems = [
     { id: "home", label: "Home", icon: Home, action: () => navigate("/") },
-    { id: "learning", label: "My Learning", icon: BookOpen, action: () => handleTabChange("learning") },
-    { id: "tutor", label: "AI Tutor", icon: GraduationCap, action: () => handleTabChange("tutor"), active: true },
-    { id: "library", label: "Library", icon: Library, action: () => handleTabChange("learning") },
     { id: "upload", label: "Upload", icon: Upload, action: () => handleTabChange("upload") },
+    { id: "tutor", label: "AI Tutor", icon: GraduationCap, action: () => handleTabChange("tutor") },
+    { id: "learning", label: "Summary", icon: BookOpen, action: () => handleTabChange("learning") },
     { id: "assessment", label: "Assessments", icon: FileText, action: () => handleTabChange("assessment") },
-    { id: "progress", label: "Progress", icon: BarChart3, action: () => handleTabChange("learning") },
   ];
 
   const currentIndex = plan?.steps.findIndex((s) => s.topic_id === currentTopicId) ?? -1;
+
+  // Typed-topic sessions are backed by a synthetic placeholder PDF
+  // (see `createMinimalPdfBlob` in Study.tsx, named "<topic>_topic.pdf")
+  // rather than a real uploaded file - don't show a PDF icon/page count
+  // for something the user never actually uploaded.
+  const isTypedTopic = !!fileName?.endsWith("_topic.pdf");
+  const displayName = isTypedTopic
+    ? fileName!.replace(/_topic\.pdf$/, "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    : fileName;
 
   return (
     <aside className="hidden lg:flex w-56 sm:w-64 flex-shrink-0 bg-white border-r border-slate-200/80 flex-col h-full overflow-y-auto hide-scrollbar select-none">
@@ -61,14 +66,14 @@ export function TutorSidebar({
       <div className="px-3 py-2 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = item.id === "tutor" ? activeTab === "tutor" : false;
+          const isActive = item.id === activeTab;
           return (
             <button
               key={item.id}
               onClick={item.action}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 isActive
-                  ? "bg-primary/80 text-primary font-semibold shadow-xs"
+                  ? "bg-primary/10 text-primary font-semibold shadow-xs"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
@@ -81,23 +86,29 @@ export function TutorSidebar({
 
       <div className="my-3 mx-4 border-t border-slate-150" />
 
-      {/* Current Document Card */}
+      {/* Current Document / Topic Card */}
       <div className="px-4 py-2">
         <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-          Current Document
+          {isTypedTopic ? "Current Topic" : "Current Document"}
         </p>
         <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/60 flex flex-col gap-2">
-          <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <FileCheck className="w-4 h-4" />
+          {isTypedTopic ? (
+            <p className="text-xs font-semibold text-slate-800 truncate" title={displayName || "Topic"}>
+              {displayName}
+            </p>
+          ) : (
+            <div className="flex items-start gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <FileCheck className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-slate-800 truncate" title={displayName || "Document"}>
+                  {displayName || "rag_topic.pdf"}
+                </p>
+                <p className="text-[11px] text-slate-400 font-normal">152 pages • PDF</p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-slate-800 truncate" title={fileName || "Document"}>
-                {fileName || "rag_topic.pdf"}
-              </p>
-              <p className="text-[11px] text-slate-400 font-normal">152 pages • PDF</p>
-            </div>
-          </div>
+          )}
           {onChangeDocument && (
             <button
               onClick={onChangeDocument}
@@ -124,7 +135,7 @@ export function TutorSidebar({
                   key={step.topic_id}
                   className={`group w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs transition-all ${
                     isCurrent
-                      ? "bg-primary/90 text-primary font-semibold border border-primary/80 shadow-2xs"
+                      ? "bg-primary/10 text-primary font-semibold border border-primary/20 shadow-2xs"
                       : isDone
                       ? "text-slate-700 hover:bg-slate-50"
                       : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"

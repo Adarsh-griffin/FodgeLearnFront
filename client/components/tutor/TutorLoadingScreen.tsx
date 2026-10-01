@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { AILearningLoader } from "@/components/ui/AILearningLoader";
 
 interface TutorLoadingScreenProps {
   message: string;
   /** Optional - cycles every ~1.8s, gives a long generation wait (plan/lesson)
       a sense of real progress instead of one static line the whole time. */
   subMessages?: string[];
+  size?: "sm" | "md" | "lg";
 }
 
 /**
- * Shared "something's happening" screen for every AI Tutor wait state
- * (initial load, diagnostic questions, plan generation, lesson generation)
- * - replaces four separate plain spinner+text blocks that all looked like
- * the page had stalled, per user feedback on how flat they read.
+ * Creative AI Tutor loading screen replacing plain ring spinners with an interactive
+ * CSS-animated floating robot, graduation hat, chemistry beaker, physics atom orbit,
+ * and stacked books learning scene.
  */
-export function TutorLoadingScreen({ message, subMessages }: TutorLoadingScreenProps) {
+export function TutorLoadingScreen({ message, subMessages, size = "md" }: TutorLoadingScreenProps) {
   const [subIndex, setSubIndex] = useState(0);
 
   useEffect(() => {
@@ -25,22 +25,15 @@ export function TutorLoadingScreen({ message, subMessages }: TutorLoadingScreenP
     return () => clearInterval(interval);
   }, [subMessages]);
 
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-5 bg-[#FAFAFC] px-8 text-center">
-      <div className="relative w-14 h-14 flex items-center justify-center">
-        <div className="absolute inset-0 rounded-full border-2 border-primary/20" />
-        <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-        <Sparkles className="w-5 h-5 text-primary" />
-      </div>
+  const currentSubMessage = subMessages ? subMessages[subIndex] : undefined;
 
-      <div className="space-y-1.5 min-h-[2.5rem]">
-        <p className="text-sm font-semibold text-foreground">{message}</p>
-        {subMessages && (
-          <p key={subIndex} className="text-xs text-muted-foreground animate-in fade-in duration-500">
-            {subMessages[subIndex]}
-          </p>
-        )}
-      </div>
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#FAFAFC]/80 backdrop-blur-sm min-h-[320px]">
+      <AILearningLoader
+        size={size}
+        message={message}
+        subMessage={currentSubMessage}
+      />
     </div>
   );
 }

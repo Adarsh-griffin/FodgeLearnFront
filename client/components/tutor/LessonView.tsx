@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import { TutorLoadingScreen } from "./TutorLoadingScreen";
+import { TutorAudioWidget } from "./TutorAudioWidget";
 import {
   CheckCircle2, 
   XCircle, 
@@ -52,24 +53,24 @@ const NEXT_ACTION_NOTE: Record<string, string> = {
   remediate_prerequisite: "Reviewing a foundational prerequisite first.",
 };
 
-// 1. Semantic Color System Palette for Concepts
+// 1. Semantic Color System Palette for Concepts (High-Contrast Readable Styling)
 const getConceptColorClass = (term: string) => {
   const t = term.toLowerCase();
   if (t.includes("position") || t.includes("distance") || t.includes("location") || t.includes("displacement")) {
     return {
       badge: "bg-blue-600 text-white",
       bg: "bg-blue-50/90 border-blue-200 text-blue-950",
-      pill: "bg-blue-100/80 text-blue-900 border-blue-300 font-bold",
+      pill: "bg-blue-600 text-white border-blue-700 font-extrabold shadow-2xs",
       accent: "border-blue-500",
       icon: "🟦"
     };
   }
   if (t.includes("velocity") || t.includes("speed") || t.includes("rate of change")) {
     return {
-      badge: "bg-primary text-white",
-      bg: "bg-primary/90 border-primary/20 text-primary",
-      pill: "bg-primary/80 text-primary border-primary/40 font-bold",
-      accent: "border-primary",
+      badge: "bg-indigo-600 text-white",
+      bg: "bg-indigo-50/90 border-indigo-200 text-indigo-950",
+      pill: "bg-indigo-600 text-white border-indigo-700 font-extrabold shadow-2xs",
+      accent: "border-indigo-500",
       icon: "🟪"
     };
   }
@@ -77,25 +78,25 @@ const getConceptColorClass = (term: string) => {
     return {
       badge: "bg-amber-600 text-white",
       bg: "bg-amber-50/90 border-amber-200 text-amber-950",
-      pill: "bg-amber-100/80 text-amber-900 border-amber-300 font-bold",
+      pill: "bg-amber-600 text-white border-amber-700 font-extrabold shadow-2xs",
       accent: "border-amber-500",
       icon: "🟧"
     };
   }
   if (t.includes("time") || t.includes("mass") || t.includes("scalar") || t.includes("vector")) {
     return {
-      badge: "bg-teal-600 text-white",
-      bg: "bg-teal-50/90 border-teal-200 text-teal-950",
-      pill: "bg-teal-100/80 text-teal-900 border-teal-300 font-bold",
-      accent: "border-teal-500",
+      badge: "bg-emerald-600 text-white",
+      bg: "bg-emerald-50/90 border-emerald-200 text-emerald-950",
+      pill: "bg-emerald-600 text-white border-emerald-700 font-extrabold shadow-2xs",
+      accent: "border-emerald-500",
       icon: "🟩"
     };
   }
   return {
-    badge: "bg-primary text-white",
-    bg: "bg-primary/90 border-primary/20 text-primary",
-    pill: "bg-primary/80 text-primary border-primary/40 font-bold",
-    accent: "border-primary",
+    badge: "bg-indigo-600 text-white",
+    bg: "bg-indigo-50/90 border-indigo-200 text-indigo-950",
+    pill: "bg-indigo-600 text-white border-indigo-700 font-extrabold shadow-2xs",
+    accent: "border-indigo-500",
     icon: "🟪"
   };
 };
@@ -386,8 +387,8 @@ export function LessonView({
         />
       )}
 
-      {/* Optimal Reading Width Container */}
-      <div className="max-w-3xl mx-auto w-full space-y-7">
+      {/* Optimal Reading & Learning Canvas Container */}
+      <div className="max-w-4xl xl:max-w-5xl mx-auto w-full space-y-7">
         
         {/* Top Header Navigation & Step Indicator */}
         <div className="flex items-center justify-between gap-4 pb-2 border-b border-slate-200/60">
@@ -442,112 +443,19 @@ export function LessonView({
           </p>
         </div>
 
-        {/* AI TUTOR AUDIO PLAYER CONTROL BAR */}
-        <div className="sticky top-2 z-20 my-4 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-lg border border-indigo-500/30 backdrop-blur-md transition-all">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            
-            {/* Left: Voice Status */}
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
-              <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary flex-shrink-0">
-                {isSynthesizingTTS ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-amber-400" />
-                ) : isPlaying ? (
-                  <Volume2 className="w-5 h-5 text-emerald-400 animate-pulse" />
-                ) : (
-                  <Headphones className="w-5 h-5 text-indigo-300" />
-                )}
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
-                    <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                    AI Tutor Audio Narration
-                  </span>
-                  {audioUrlState && (
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/40">
-                      S3 Ready
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-300 font-medium">
-                  {isSynthesizingTTS
-                    ? "Synthesizing GCP speech & uploading to S3..."
-                    : isPlaying
-                    ? "Now Playing — Active text highlighted below"
-                    : audioUrlState
-                    ? "Click Play to listen with real-time text highlight"
-                    : "Click button to generate audio with GCP & S3"}
-                </p>
-              </div>
-
-              {/* Audio Wave Visualizer */}
-              {isPlaying && (
-                <div className="hidden md:flex items-center gap-1 h-5 ml-2">
-                  <span className="w-1 bg-emerald-400 rounded-full animate-bounce h-3"></span>
-                  <span className="w-1 bg-emerald-400 rounded-full animate-bounce [animation-delay:200ms] h-5"></span>
-                  <span className="w-1 bg-emerald-400 rounded-full animate-bounce [animation-delay:400ms] h-2"></span>
-                  <span className="w-1 bg-emerald-400 rounded-full animate-bounce [animation-delay:100ms] h-4"></span>
-                </div>
-              )}
-            </div>
-
-            {/* Right: Audio Controls */}
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-              {!audioUrlState && !isSynthesizingTTS ? (
-                <button
-                  onClick={handleGenerateAndPlayAudio}
-                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
-                >
-                  <Headphones className="w-4 h-4" />
-                  <span>🔊 Listen to AI Tutor</span>
-                </button>
-              ) : isSynthesizingTTS ? (
-                <div className="px-4 py-2 bg-slate-800 text-amber-300 rounded-xl text-xs font-bold flex items-center gap-2 border border-amber-500/40">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Synthesizing...</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                  <button
-                    onClick={togglePlayPause}
-                    className="w-9 h-9 rounded-xl bg-primary hover:bg-primary/90 text-white flex items-center justify-center font-bold shadow-md transition-transform active:scale-95 flex-shrink-0 cursor-pointer"
-                    title={isPlaying ? "Pause audio" : "Play audio"}
-                  >
-                    {isPlaying ? <Pause className="w-4.5 h-4.5" /> : <Play className="w-4.5 h-4.5 ml-0.5" />}
-                  </button>
-
-                  {/* Scrubber */}
-                  <div className="flex items-center gap-2 flex-1 sm:w-48">
-                    <span className="text-[11px] font-mono text-slate-300">
-                      {formatTime(currentTime)}
-                    </span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={duration || 100}
-                      value={currentTime}
-                      onChange={handleSeek}
-                      className="w-full accent-primary h-1.5 bg-slate-700 rounded-lg cursor-pointer"
-                    />
-                    <span className="text-[11px] font-mono text-slate-400">
-                      {formatTime(duration)}
-                    </span>
-                  </div>
-
-                  {/* Speed toggle */}
-                  <button
-                    onClick={togglePlaybackRate}
-                    className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-mono font-bold text-indigo-300 transition-colors cursor-pointer"
-                    title="Playback Speed"
-                  >
-                    {playbackRate}x
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <TutorAudioWidget
+          hasAudio={!!audioUrlState}
+          isSynthesizing={isSynthesizingTTS}
+          isPlaying={isPlaying}
+          currentTime={currentTime}
+          duration={duration}
+          playbackRate={playbackRate}
+          onGenerateAndPlay={handleGenerateAndPlayAudio}
+          onTogglePlay={togglePlayPause}
+          onSeek={handleSeek}
+          onTogglePlaybackRate={togglePlaybackRate}
+          formatTime={formatTime}
+        />
 
         {/* "WHY THIS TOPIC?" Card */}
         {planStep?.reason && (

@@ -10,7 +10,8 @@ import {
   HelpCircle,
   Lightbulb,
   Maximize2,
-  ArrowRight
+  ArrowRight,
+  Search
 } from "lucide-react";
 import { apiService, StudyPlan, masteryBandClient } from "@/lib/api";
 import { BAND_STYLES } from "./RoadmapView";
@@ -175,193 +176,198 @@ export function TutorAssistantPanel({
   })();
 
   return (
-    <aside className="hidden lg:flex w-80 sm:w-84 flex-shrink-0 border-l border-slate-200/80 bg-white flex-col h-full overflow-y-auto hide-scrollbar select-none">
-      {/* Header */}
-      <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+    <aside className="hidden lg:flex w-80 lg:w-80 xl:w-[340px] flex-shrink-0 border-l border-slate-200/80 bg-white flex-col h-full overflow-y-auto hide-scrollbar select-none">
+      {/* Top Header */}
+      <div className="p-3.5 px-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-primary" />
-          <span className="font-bold text-slate-900 text-sm">AI Tutor</span>
+          <span className="font-extrabold text-slate-900 text-sm">AI Tutor</span>
         </div>
-        <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20">
+        <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20">
           Beta
         </span>
       </div>
 
-      {/* AI Tutor Card */}
-      <div className="p-4 border-b border-slate-100">
-        <div className="rounded-2xl bg-secondary/60 border border-border p-5 flex flex-col items-center text-center">
-          <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-primary/30 mb-3">
-            <div className="w-full h-full rounded-full bg-white overflow-hidden flex items-center justify-center">
-              <img src="/animated-video.gif" alt="AI Tutor Avatar" className="w-full h-full object-cover" />
-            </div>
+      <div className="p-3.5 space-y-4 flex-1 flex flex-col">
+        {/* AI Tutor Hero Graphic Card with Full-Fitting Big Image */}
+        <div className="rounded-2xl bg-gradient-to-b from-indigo-50/40 via-purple-50/20 to-slate-50 border border-slate-200/80 p-3.5 flex flex-col items-center text-center shadow-2xs space-y-2.5">
+          <div className="w-full h-44 sm:h-48 overflow-hidden rounded-xl bg-amber-50/40 border border-amber-200/40 flex items-center justify-center p-1">
+            <img
+              src={encodeURI("/ai tutor image for right side pannel.png")}
+              alt="Your AI Tutor"
+              className="w-full h-full object-contain mx-auto rounded-lg drop-shadow-xs"
+            />
           </div>
 
-          <p className="text-foreground font-bold text-sm">Your AI Tutor</p>
-          <p className="text-muted-foreground text-xs mt-0.5">Let's understand this concept step by step.</p>
-
-          <button
-            onClick={handleListenExplanation}
-            disabled={!currentExplanation || isListening}
-            className="mt-3.5 w-full flex items-center justify-center gap-2 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded-xl text-xs font-semibold transition-all"
-          >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            {isListening ? "Loading audio..." : speakingId === "explanation" ? "Playing..." : "Watch explanation (5 min)"}
-          </button>
-        </div>
-      </div>
-
-      {/* Your Understanding Section */}
-      <div className="p-4 border-b border-slate-100 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            <p className="text-xs font-bold text-slate-900">Your Understanding</p>
-          </div>
-          <span className="text-[11px] font-semibold text-primary hover:underline cursor-pointer">
-            View details →
-          </span>
-        </div>
-
-        <div className="space-y-2">
-          {plan.steps.map((step) => {
-            const band = step.topic_id === currentTopicId ? step.band : masteryBandClient(step.mastery);
-            const style = BAND_STYLES[band];
-            const pct = Math.round(step.mastery * 100);
-            
-            // Custom colors for progress bars based on completion
-            const barColor = pct >= 70 ? "bg-emerald-500" : pct >= 40 ? "bg-primary" : pct > 0 ? "bg-amber-400" : "bg-slate-200";
-
-            return (
-              <div key={step.topic_id} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-600 font-medium truncate mr-2">{step.title}</span>
-                  <span className="font-bold text-slate-700">{pct}%</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className={`h-1.5 rounded-full transition-all duration-500 ${barColor}`}
-                    style={{ width: `${Math.max(4, pct)}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Focus Next Callout */}
-        {nextStep && (
-          <div className="mt-3 p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 space-y-1">
-            <div className="flex items-center gap-1.5 text-amber-900">
-              <Target className="w-3.5 h-3.5 text-amber-600" />
-              <p className="text-xs font-bold">Focus next: {nextStep.title}</p>
-            </div>
-            <p className="text-[11px] text-amber-800/80 leading-snug">
-              {nextStep.reason || "Your diagnostic answers suggest this concept needs more practice."}
+          <div className="space-y-0.5">
+            <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
+              Your AI Tutor
+            </h3>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed px-1">
+              Ask anything about this topic. Get clear explanations, examples, diagrams, and more.
             </p>
           </div>
-        )}
-      </div>
-
-      {/* Ask Your Tutor Section */}
-      <div className="flex-1 flex flex-col min-h-[300px]">
-        <div className="px-4 pt-3 pb-2 flex items-center justify-between">
-          <p className="text-xs font-bold text-slate-900">Ask Your Tutor</p>
-          <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
         </div>
 
-        {/* Chat History */}
-        <div className="flex-1 overflow-y-auto hide-scrollbar px-4 space-y-2.5 min-h-0 text-xs">
-          {messages.length === 0 && (
-            <p className="text-[11px] text-slate-400 py-2">
-              Ask any question about {currentTopicTitle ? `"${currentTopicTitle}"` : "this lesson"} — or tap a quick strategy below!
-            </p>
-          )}
+        {/* CHATBOT SEARCH INPUT BOX (SHIFTED COMPLETELY UP RIGHT AFTER HERO) */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-slate-900">Ask Your Tutor</p>
+            <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+          </div>
 
-          {messages.map((m) => (
-            <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
-                  m.role === "user"
-                    ? "bg-primary text-white rounded-br-none"
-                    : "bg-slate-100 text-slate-800 border border-slate-200/60 rounded-bl-none"
-                }`}
+          <div className="bg-white rounded-2xl border border-slate-300 p-2 shadow-2xs focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary transition-all">
+            <div className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-slate-400 ml-1.5 flex-shrink-0" />
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                disabled={isSending || isRecording}
+                placeholder="Ask a question about this topic..."
+                className="flex-1 py-1 px-1 bg-transparent text-xs text-slate-900 placeholder-slate-400 focus:outline-none disabled:opacity-50 font-medium"
+              />
+
+              {!isRecording ? (
+                <button
+                  onClick={startRecording}
+                  disabled={isSending}
+                  className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors disabled:opacity-50 flex-shrink-0 cursor-pointer"
+                  title="Speak"
+                >
+                  <Mic className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <button
+                  onClick={stopRecording}
+                  className="w-7 h-7 rounded-full bg-rose-600 text-white flex items-center justify-center animate-pulse flex-shrink-0 cursor-pointer"
+                  title="Stop"
+                >
+                  <Square className="w-3 h-3" />
+                </button>
+              )}
+
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || isSending || isRecording}
+                className="w-7 h-7 rounded-full bg-primary text-white hover:bg-primary/90 flex items-center justify-center disabled:opacity-40 transition-colors shadow-2xs flex-shrink-0 cursor-pointer"
+                title="Send message"
               >
-                <p className="whitespace-pre-wrap">{m.content}</p>
-                {m.role === "tutor" && (
-                  <button
-                    onClick={() => handleSpeakMessage(m)}
-                    disabled={speakingId === m.id}
-                    className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline disabled:opacity-50"
-                  >
-                    <Volume2 className="w-3 h-3" />
-                    {speakingId === m.id ? "Playing..." : "Listen"}
-                  </button>
-                )}
-              </div>
+                <Send className="w-3.5 h-3.5 ml-0.5" />
+              </button>
             </div>
-          ))}
+          </div>
+
+          {/* Strategy Suggestion Chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {QUICK_PROMPTS.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => sendQuestion(item.action)}
+                disabled={isSending}
+                className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-700 hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all shadow-2xs cursor-pointer disabled:opacity-40"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* CHATBOT MESSAGES OUTPUT AREA BELOW SEARCH BAR */}
+        <div className="flex-1 overflow-y-auto hide-scrollbar space-y-2.5 min-h-[140px] text-xs">
+          {messages.length === 0 ? (
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-center space-y-1">
+              <p className="text-xs font-semibold text-slate-700">
+                Ask any question about {currentTopicTitle ? `"${currentTopicTitle}"` : "this lesson"} — or tap a strategy button above!
+              </p>
+            </div>
+          ) : (
+            messages.map((m) => (
+              <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed shadow-2xs ${
+                    m.role === "user"
+                      ? "bg-primary text-white rounded-br-none font-medium"
+                      : "bg-white text-slate-800 border border-slate-200/90 rounded-bl-none"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{m.content}</p>
+                  {m.role === "tutor" && (
+                    <button
+                      onClick={() => handleSpeakMessage(m)}
+                      disabled={speakingId === m.id}
+                      className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-primary hover:underline disabled:opacity-50"
+                    >
+                      <Volume2 className="w-3 h-3" />
+                      {speakingId === m.id ? "Playing..." : "Listen"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
 
           {isSending && (
             <div className="flex justify-start">
-              <div className="bg-slate-100 rounded-2xl px-3.5 py-2.5 border border-slate-200/60">
-                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <div className="bg-white rounded-2xl px-3.5 py-2.5 border border-slate-200 shadow-2xs flex items-center gap-2">
+                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+                <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:150ms]" />
+                <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:300ms]" />
+                <span className="text-[11px] text-slate-500 font-medium ml-1">AI Tutor is answering...</span>
               </div>
             </div>
           )}
           <div ref={chatEndRef} />
         </div>
 
-        {/* Quick Action Chips */}
-        <div className="p-3 pb-2 flex flex-wrap gap-1.5 border-t border-slate-100">
-          {QUICK_PROMPTS.map((item) => (
-            <button
-              key={item.label}
-              onClick={() => sendQuestion(item.action)}
-              disabled={isSending}
-              className="text-[11px] font-medium px-2.5 py-1 rounded-full border border-slate-200 text-slate-600 hover:border-primary/40 hover:bg-primary/50 hover:text-primary transition-all disabled:opacity-40"
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+        {/* Your Understanding Mastery Bars (SHIFTED BELOW CHAT) */}
+        <div className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-200/70 space-y-2.5 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <p className="text-xs font-bold text-slate-900">Your Understanding</p>
+            </div>
+            <span className="text-[11px] font-semibold text-primary hover:underline cursor-pointer">
+              View details →
+            </span>
+          </div>
 
-        {/* Input Bar */}
-        <div className="p-3 pt-0 flex items-center gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            disabled={isSending || isRecording}
-            placeholder="Ask anything about this topic..."
-            className="flex-1 min-w-0 border border-slate-200 rounded-full px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary bg-slate-50/60"
-          />
+          <div className="space-y-2">
+            {plan.steps.map((step) => {
+              const band = step.topic_id === currentTopicId ? step.band : masteryBandClient(step.mastery);
+              const pct = Math.round(step.mastery * 100);
+              const barColor = pct >= 70 ? "bg-emerald-500" : pct >= 40 ? "bg-primary" : pct > 0 ? "bg-amber-400" : "bg-slate-200";
 
-          {!isRecording ? (
-            <button
-              onClick={startRecording}
-              disabled={isSending}
-              className="w-8 h-8 flex-shrink-0 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors disabled:opacity-50"
-              title="Speak"
-            >
-              <Mic className="w-3.5 h-3.5" />
-            </button>
-          ) : (
-            <button
-              onClick={stopRecording}
-              className="w-8 h-8 flex-shrink-0 rounded-full bg-rose-600 text-white flex items-center justify-center animate-pulse"
-              title="Stop"
-            >
-              <Square className="w-3 h-3" />
-            </button>
+              return (
+                <div key={step.topic_id} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-600 font-medium truncate mr-2">{step.title}</span>
+                    <span className="font-bold text-slate-700">{pct}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200/80 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={`h-1.5 rounded-full transition-all duration-500 ${barColor}`}
+                      style={{ width: `${Math.max(4, pct)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Focus Next Callout */}
+          {nextStep && (
+            <div className="mt-2 p-2.5 rounded-xl bg-amber-50/90 border border-amber-200/90 space-y-0.5">
+              <div className="flex items-center gap-1.5 text-amber-900">
+                <Target className="w-3.5 h-3.5 text-amber-600" />
+                <p className="text-xs font-bold">Focus next: {nextStep.title}</p>
+              </div>
+              <p className="text-[11px] text-amber-800/90 leading-snug">
+                {nextStep.reason || "Your diagnostic answers suggest this concept needs more practice."}
+              </p>
+            </div>
           )}
-
-          <button
-            onClick={handleSend}
-            disabled={!input.trim() || isSending || isRecording}
-            className="w-8 h-8 flex-shrink-0 rounded-full bg-primary text-white hover:bg-primary/90 flex items-center justify-center disabled:opacity-40 transition-colors shadow-xs"
-          >
-            <Send className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
     </aside>

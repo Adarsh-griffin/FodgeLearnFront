@@ -437,6 +437,48 @@
   }
 }
 
+/* II. Teacher/chalkboard illustration (AI Tutor audio widget) - slow,
+   professional motion only: a pointer that glides between diagram nodes
+   and a soft highlight pulse, never a full cartoon-style animation. */
+@keyframes chalk-pointer-glide {
+  0%, 20% {
+    transform: translateX(0);
+  }
+  45%, 65% {
+    transform: translateX(54px);
+  }
+  90%, 100% {
+    transform: translateX(108px);
+  }
+}
+
+@keyframes chalk-node-pulse {
+  0%, 20% {
+    opacity: 1;
+  }
+  33%, 100% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes chalk-node-pulse-mid {
+  0%, 20%, 66%, 100% {
+    opacity: 0.35;
+  }
+  45%, 55% {
+    opacity: 1;
+  }
+}
+
+@keyframes chalk-node-pulse-last {
+  0%, 65% {
+    opacity: 0.35;
+  }
+  90%, 100% {
+    opacity: 1;
+  }
+}
+
 @keyframes boy-head-nod {
 
   0%,
@@ -717,6 +759,23 @@
   animation: finger-tap-hover 0.5s ease-in-out infinite;
 }
 
+/* Teacher/chalkboard illustration widget */
+.animate-chalk-pointer-glide {
+  animation: chalk-pointer-glide 8s ease-in-out infinite;
+}
+
+.animate-chalk-node-pulse {
+  animation: chalk-node-pulse 8s ease-in-out infinite;
+}
+
+.animate-chalk-node-pulse-mid {
+  animation: chalk-node-pulse-mid 8s ease-in-out infinite;
+}
+
+.animate-chalk-node-pulse-last {
+  animation: chalk-node-pulse-last 8s ease-in-out infinite;
+}
+
 /* II. AI/Robot Animation */
 .animate-robot-float-drift {
   animation: robot-float-drift 4s ease-in-out infinite;
@@ -879,4 +938,164 @@
 .response-container strong {
   font-weight: 700;
   color: hsl(var(--foreground));
+}
+
+/* ==========================================================================
+   AI Tutor Learning Animated Loader CSS Keyframes & Utility Classes
+   ========================================================================== */
+
+@keyframes ai-float-bot {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(2deg);
+  }
+}
+
+@keyframes ai-shadow-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(0.55);
+    opacity: 0.15;
+  }
+}
+
+@keyframes ai-blob-morph {
+  0% {
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+    transform: rotate(0deg) scale(1);
+  }
+  33% {
+    border-radius: 65% 35% 35% 65% / 55% 65% 35% 45%;
+    transform: rotate(120deg) scale(1.06);
+  }
+  66% {
+    border-radius: 35% 65% 60% 40% / 65% 35% 65% 35%;
+    transform: rotate(240deg) scale(0.96);
+  }
+  100% {
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes ai-tassel-swing {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(12deg); }
+}
+
+@keyframes ai-hand-wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-14deg); }
+  75% { transform: rotate(14deg); }
+}
+
+@keyframes ai-orbit-spin-1 {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes ai-orbit-spin-2 {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+@keyframes ai-sparkle-float {
+  0%, 100% {
+    transform: translateY(0px) scale(0.7);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-14px) scale(1.25);
+    opacity: 1;
+  }
+}
+
+@keyframes ai-liquid-bubble {
+  0% {
+    transform: translateY(6px) scale(0.7);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-9px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes ai-eye-blink {
+  0%, 46%, 54%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.1); }
+}
+
+@keyframes ai-shimmer-pass {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-ai-float {
+  animation: ai-float-bot 3.4s ease-in-out infinite;
+}
+
+.animate-ai-shadow {
+  animation: ai-shadow-pulse 3.4s ease-in-out infinite;
+}
+
+.animate-ai-blob {
+  animation: ai-blob-morph 14s linear infinite;
+}
+
+.animate-ai-tassel {
+  animation: ai-tassel-swing 2.4s ease-in-out infinite;
+  transform-origin: 32px 14px;
+}
+
+.animate-ai-wave {
+  animation: ai-hand-wave 2s ease-in-out infinite;
+  transform-origin: 18px 46px;
+}
+
+.animate-ai-orbit-1 {
+  animation: ai-orbit-spin-1 5s linear infinite;
+  transform-origin: center;
+}
+
+.animate-ai-orbit-2 {
+  animation: ai-orbit-spin-2 3.8s linear infinite;
+  transform-origin: center;
+}
+
+.animate-ai-sparkle-1 {
+  animation: ai-sparkle-float 2.2s ease-in-out infinite;
+}
+
+.animate-ai-sparkle-2 {
+  animation: ai-sparkle-float 2.8s ease-in-out infinite 0.7s;
+}
+
+.animate-ai-sparkle-3 {
+  animation: ai-sparkle-float 3.2s ease-in-out infinite 1.4s;
+}
+
+.animate-ai-bubble-1 {
+  animation: ai-liquid-bubble 2.2s ease-in-out infinite;
+}
+
+.animate-ai-bubble-2 {
+  animation: ai-liquid-bubble 2.2s ease-in-out infinite 0.9s;
+}
+
+.animate-ai-blink {
+  animation: ai-eye-blink 4.2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.animate-ai-shimmer {
+  animation: ai-shimmer-pass 1.8s infinite;
 }
