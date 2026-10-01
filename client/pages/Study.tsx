@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap, HelpCircle, BarChart3, ArrowRight, Lightbulb, Library, TrendingUp, UploadCloud, Presentation, FileType } from "lucide-react";
+import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap, HelpCircle, BarChart3, ArrowRight, Lightbulb, Library, UploadCloud, Presentation, FileType } from "lucide-react";
 import { TutorTab } from "@/components/tutor/TutorTab";
 import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
 import { MobileUploadView } from "@/components/tutor/MobileUploadView";
@@ -1068,8 +1068,8 @@ startxref
             onClick={() => handleTabChange("learning")}
             className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
           >
-            <BarChart3 className="w-[18px] h-[18px]" />
-            My Learning
+            <BookOpen className="w-[18px] h-[18px]" />
+            Summary
           </button>
           <button
             onClick={() => handleTabChange("tutor")}
@@ -1079,15 +1079,8 @@ startxref
             AI Tutor
           </button>
           <button
-            onClick={() => handleTabChange("learning")}
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-          >
-            <Library className="w-[18px] h-[18px]" />
-            Library
-          </button>
-          <button
             onClick={() => handleTabChange("upload")}
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-50 text-indigo-700 transition-colors"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-primary/10 text-primary transition-colors"
           >
             <Upload className="w-[18px] h-[18px]" />
             Upload
@@ -1098,13 +1091,6 @@ startxref
           >
             <FileText className="w-[18px] h-[18px]" />
             Assessments
-          </button>
-          <button
-            onClick={() => handleTabChange("assessment")}
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-          >
-            <TrendingUp className="w-[18px] h-[18px]" />
-            Progress
           </button>
         </div>
 
