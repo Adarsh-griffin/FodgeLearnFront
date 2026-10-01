@@ -803,6 +803,8 @@ startxref
       setIsSubmittingTopic(true);
       const topicFile = createMinimalPdfBlob(topicName);
       await processFiles([topicFile]);
+      // Auto-transition immediately to AI Tutor so user never has to scroll down!
+      handleTabChange("tutor");
     } catch (err) {
       console.error("Failed to generate topic module:", err);
     } finally {
@@ -1262,6 +1264,15 @@ startxref
                             Remove
                           </button>
                         </div>
+
+                        {showSuccess && (
+                          <button
+                            onClick={() => handleTabChange("tutor")}
+                            className="mt-3 w-full py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-extrabold shadow-xs hover:opacity-95 transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <span>Start AI Lesson Now →</span>
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -1269,10 +1280,11 @@ startxref
 
                 {files.some((f) => successMessages[f.name]) && (
                   <button
-                    className="mt-6 w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                    className="mt-6 w-full py-3.5 px-6 bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-extrabold text-sm shadow-md transition-all active:scale-98 flex items-center justify-center gap-2"
                     onClick={() => handleTabChange("tutor")}
                   >
-                    Continue to AI Tutor
+                    <span>Continue to AI Tutor</span>
+                    <Sparkles className="w-4 h-4 fill-current text-amber-300" />
                   </button>
                 )}
               </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
@@ -23,7 +23,15 @@ import {
   HelpCircle,
   Code,
   ArrowRight,
-  UserCheck
+  UserCheck,
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+  Loader2,
+  Headphones,
+  Radio,
+  RotateCcw
 } from "lucide-react";
 import { apiService, LessonStep, CheckpointResult, StudyPlan, isLessonComplete } from "@/lib/api";
 
@@ -112,6 +120,22 @@ export function LessonView({
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [showSourceModal, setShowSourceModal] = useState(false);
 
+  // Audio Player State & Text Highlighting
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioUrlState, setAudioUrlState] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [isSynthesizingTTS, setIsSynthesizingTTS] = useState(false);
+  const [activeParagraphIndex, setActiveParagraphIndex] = useState<number>(-1);
+  const paragraphRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const explanationParagraphs = (lesson?.explanation || "")
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+
   const loadLesson = () => {
     setIsLoading(true);
     setError(null);
@@ -138,6 +162,101 @@ export function LessonView({
     loadLesson();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileId]);
+
+  // Sync Audio URL when Lesson step updates
+  useEffect(() => {
+    const url = lesson?.audio_url || lesson?.audioUrl || null;
+    setAudioUrlState(url);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setActiveParagraphIndex(-1);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  }, [lesson]);
+
+  // Auto-scroll active highlighted paragraph into center view as speech progresses
+  useEffect(() => {
+    if (isPlaying && activeParagraphIndex >= 0 && paragraphRefs.current[activeParagraphIndex]) {
+      paragraphRefs.current[activeParagraphIndex]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [activeParagraphIndex, isPlaying]);
+
+  const handleTimeUpdate = () => {
+    if (!audioRef.current) return;
+    const curr = audioRef.current.currentTime;
+    const dur = audioRef.current.duration || 0;
+    setCurrentTime(curr);
+    setDuration(dur);
+
+    if (dur > 0 && explanationParagraphs.length > 0) {
+      const ratio = Math.min(1, curr / dur);
+      const idx = Math.min(explanationParagraphs.length - 1, Math.floor(ratio * explanationParagraphs.length));
+      if (idx !== activeParagraphIndex) {
+        setActiveParagraphIndex(idx);
+      }
+    }
+  };
+
+  const handleGenerateAndPlayAudio = async () => {
+    if (!lesson) return;
+    setIsSynthesizingTTS(true);
+    setError(null);
+    try {
+      const headers = await getAuthHeaders();
+      const url = await apiService.getTutorTTS(lesson.explanation, lesson.topic_id, fileId, headers);
+      setAudioUrlState(url);
+      setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.play().then(() => setIsPlaying(true)).catch(console.error);
+        }
+      }, 150);
+    } catch (err) {
+      console.error("[TTS-ERROR]", err);
+      setError(err instanceof Error ? err.message : "Failed to generate audio.");
+    } finally {
+      setIsSynthesizingTTS(false);
+    }
+  };
+
+  const togglePlayPause = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().then(() => setIsPlaying(true)).catch(console.error);
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const seekTime = parseFloat(e.target.value);
+    if (audioRef.current) {
+      audioRef.current.currentTime = seekTime;
+      setCurrentTime(seekTime);
+    }
+  };
+
+  const togglePlaybackRate = () => {
+    const rates = [1, 1.25, 1.5, 2];
+    const nextRate = rates[(rates.indexOf(playbackRate) + 1) % rates.length];
+    setPlaybackRate(nextRate);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = nextRate;
+    }
+  };
+
+  const formatTime = (secs: number) => {
+    if (isNaN(secs) || secs < 0) return "00:00";
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m < 10 ? "0" : ""}${m}:${s < 10 ? "0" : ""}${s}`;
+  };
 
   const handleSubmitOption = async (optionText: string, optionKey: string) => {
     if (isSubmitting || feedback) return;
@@ -250,7 +369,24 @@ export function LessonView({
 
   return (
     <main className="flex-1 overflow-y-auto hide-scrollbar bg-[#FAFAFC] px-4 sm:px-8 pt-4 sm:pt-6 pb-32 sm:pb-12 flex flex-col select-none">
-      {/* Optimal Reading Width Container (max-w-3xl for optimal readability) */}
+      {/* Hidden Audio Element */}
+      {audioUrlState && (
+        <audio
+          ref={audioRef}
+          src={audioUrlState}
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={() => {
+            setIsPlaying(false);
+            setActiveParagraphIndex(-1);
+          }}
+          onError={() => {
+            setIsPlaying(false);
+            setError("Failed to stream audio file from S3");
+          }}
+        />
+      )}
+
+      {/* Optimal Reading Width Container */}
       <div className="max-w-3xl mx-auto w-full space-y-7">
         
         {/* Top Header Navigation & Step Indicator */}
@@ -306,7 +442,114 @@ export function LessonView({
           </p>
         </div>
 
-        {/* 14. "WHY THIS TOPIC?" Distinctive Card */}
+        {/* AI TUTOR AUDIO PLAYER CONTROL BAR */}
+        <div className="sticky top-2 z-20 my-4 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-lg border border-indigo-500/30 backdrop-blur-md transition-all">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            
+            {/* Left: Voice Status */}
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary flex-shrink-0">
+                {isSynthesizingTTS ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-amber-400" />
+                ) : isPlaying ? (
+                  <Volume2 className="w-5 h-5 text-emerald-400 animate-pulse" />
+                ) : (
+                  <Headphones className="w-5 h-5 text-indigo-300" />
+                )}
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
+                    <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                    AI Tutor Audio Narration
+                  </span>
+                  {audioUrlState && (
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/40">
+                      S3 Ready
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-300 font-medium">
+                  {isSynthesizingTTS
+                    ? "Synthesizing GCP speech & uploading to S3..."
+                    : isPlaying
+                    ? "Now Playing — Active text highlighted below"
+                    : audioUrlState
+                    ? "Click Play to listen with real-time text highlight"
+                    : "Click button to generate audio with GCP & S3"}
+                </p>
+              </div>
+
+              {/* Audio Wave Visualizer */}
+              {isPlaying && (
+                <div className="hidden md:flex items-center gap-1 h-5 ml-2">
+                  <span className="w-1 bg-emerald-400 rounded-full animate-bounce h-3"></span>
+                  <span className="w-1 bg-emerald-400 rounded-full animate-bounce [animation-delay:200ms] h-5"></span>
+                  <span className="w-1 bg-emerald-400 rounded-full animate-bounce [animation-delay:400ms] h-2"></span>
+                  <span className="w-1 bg-emerald-400 rounded-full animate-bounce [animation-delay:100ms] h-4"></span>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Audio Controls */}
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              {!audioUrlState && !isSynthesizingTTS ? (
+                <button
+                  onClick={handleGenerateAndPlayAudio}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
+                >
+                  <Headphones className="w-4 h-4" />
+                  <span>🔊 Listen to AI Tutor</span>
+                </button>
+              ) : isSynthesizingTTS ? (
+                <div className="px-4 py-2 bg-slate-800 text-amber-300 rounded-xl text-xs font-bold flex items-center gap-2 border border-amber-500/40">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Synthesizing...</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                  <button
+                    onClick={togglePlayPause}
+                    className="w-9 h-9 rounded-xl bg-primary hover:bg-primary/90 text-white flex items-center justify-center font-bold shadow-md transition-transform active:scale-95 flex-shrink-0 cursor-pointer"
+                    title={isPlaying ? "Pause audio" : "Play audio"}
+                  >
+                    {isPlaying ? <Pause className="w-4.5 h-4.5" /> : <Play className="w-4.5 h-4.5 ml-0.5" />}
+                  </button>
+
+                  {/* Scrubber */}
+                  <div className="flex items-center gap-2 flex-1 sm:w-48">
+                    <span className="text-[11px] font-mono text-slate-300">
+                      {formatTime(currentTime)}
+                    </span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={duration || 100}
+                      value={currentTime}
+                      onChange={handleSeek}
+                      className="w-full accent-primary h-1.5 bg-slate-700 rounded-lg cursor-pointer"
+                    />
+                    <span className="text-[11px] font-mono text-slate-400">
+                      {formatTime(duration)}
+                    </span>
+                  </div>
+
+                  {/* Speed toggle */}
+                  <button
+                    onClick={togglePlaybackRate}
+                    className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-mono font-bold text-indigo-300 transition-colors cursor-pointer"
+                    title="Playback Speed"
+                  >
+                    {playbackRate}x
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* "WHY THIS TOPIC?" Card */}
         {planStep?.reason && (
           <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/90 border border-amber-200/90 flex items-start gap-3.5 shadow-2xs">
             <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 mt-0.5 font-bold">
@@ -321,268 +564,266 @@ export function LessonView({
           </div>
         )}
 
-        {/* 1. Un-bordered Open Flowing Digital Textbook Canvas */}
-        <article className="space-y-8">
-          
-          {/* Main Lesson Explanation parsed into Dynamic Visual Blocks */}
+        {/* Digital Textbook Flowing Explanation Canvas */}
+        <article className="space-y-6">
           <div className="prose prose-slate max-w-none text-slate-800 text-base sm:text-[17px] leading-[1.75] font-normal">
-            <ReactMarkdown
-              remarkPlugins={[remarkMath, remarkGfm]}
-              rehypePlugins={[rehypeRaw, rehypeKatex]}
-              components={{
-                // 10. Section Headings with 01, 02, 03 Numbering & Horizontal Separators
-                h1: ({ children }) => {
-                  sectionCounter++;
-                  const numStr = sectionCounter < 10 ? `0${sectionCounter}` : `${sectionCounter}`;
-                  return (
-                    <div className="pt-6 pb-2">
-                      <div className="w-full border-t border-slate-200/80 mb-6" />
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-mono shadow-2xs">
-                          {numStr}
-                        </span>
-                        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+            {explanationParagraphs.map((paraText, pIdx) => {
+              const isActive = activeParagraphIndex === pIdx && isPlaying;
+              return (
+                <div
+                  key={pIdx}
+                  ref={(el) => { paragraphRefs.current[pIdx] = el; }}
+                  className={`transition-all duration-300 rounded-2xl ${
+                    isActive
+                      ? "bg-amber-100/90 border-l-4 border-amber-500 shadow-md ring-2 ring-amber-400/40 p-4 sm:p-5 my-6 text-slate-900 scale-[1.01]"
+                      : "my-4"
+                  }`}
+                >
+                  <ReactMarkdown
+                    remarkPlugins={[remarkMath, remarkGfm]}
+                    rehypePlugins={[rehypeRaw, rehypeKatex]}
+                    components={{
+                      h1: ({ children }) => {
+                        sectionCounter++;
+                        const numStr = sectionCounter < 10 ? `0${sectionCounter}` : `${sectionCounter}`;
+                        return (
+                          <div className="pt-4 pb-2">
+                            <div className="w-full border-t border-slate-200/80 mb-4" />
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-mono shadow-2xs">
+                                {numStr}
+                              </span>
+                              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                                {children}
+                              </h2>
+                            </div>
+                          </div>
+                        );
+                      },
+                      h2: ({ children }) => {
+                        sectionCounter++;
+                        const numStr = sectionCounter < 10 ? `0${sectionCounter}` : `${sectionCounter}`;
+                        return (
+                          <div className="pt-4 pb-2">
+                            <div className="w-full border-t border-slate-200/80 mb-4" />
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-mono shadow-2xs">
+                                {numStr}
+                              </span>
+                              <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                                {children}
+                              </h3>
+                            </div>
+                          </div>
+                        );
+                      },
+                      h3: ({ children }) => (
+                        <h4 className="text-base sm:text-lg font-bold text-primary mt-4 mb-2">
                           {children}
-                        </h2>
-                      </div>
-                    </div>
-                  );
-                },
-                h2: ({ children }) => {
-                  sectionCounter++;
-                  const numStr = sectionCounter < 10 ? `0${sectionCounter}` : `${sectionCounter}`;
-                  return (
-                    <div className="pt-6 pb-2">
-                      <div className="w-full border-t border-slate-200/80 mb-6" />
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-mono shadow-2xs">
-                          {numStr}
-                        </span>
-                        <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
-                          {children}
-                        </h3>
-                      </div>
-                    </div>
-                  );
-                },
-                h3: ({ children }) => (
-                  <h4 className="text-base sm:text-lg font-bold text-primary mt-6 mb-2">
-                    {children}
-                  </h4>
-                ),
+                        </h4>
+                      ),
 
-                // 2. & 3. Paragraphs, Visual Arrow Flows, and W3Schools Note Boxes
-                p: ({ children }) => {
-                  const text = typeof children === "string" ? children : "";
-                  
-                  // 8. Arrow Concept Flow Chains (e.g. "Position → Velocity → Acceleration")
-                  if (text.includes("→") || text.includes("->") || text.includes("─►") || text.includes("➔")) {
-                    const arrowParts = text.split(/(?:→|->|─►|─>|➔)/).map((s) => s.trim()).filter(Boolean);
-                    if (arrowParts.length >= 2) {
-                      return (
-                        <div className="my-6 p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 via-primary/80 to-amber-50/80 border border-slate-200/90 flex flex-wrap items-center justify-center gap-3 shadow-2xs">
-                          {arrowParts.map((part, idx) => {
-                            const colors = getConceptColorClass(part);
+                      p: ({ children }) => {
+                        const text = typeof children === "string" ? children : "";
+
+                        if (text.includes("→") || text.includes("->") || text.includes("─►") || text.includes("➔")) {
+                          const arrowParts = text.split(/(?:→|->|─►|─>|➔)/).map((s) => s.trim()).filter(Boolean);
+                          if (arrowParts.length >= 2) {
                             return (
-                              <div key={idx} className="flex items-center gap-2">
-                                <span className={`px-3 py-1.5 rounded-xl ${colors.badge} font-extrabold text-xs shadow-2xs uppercase tracking-wider`}>
-                                  {part}
-                                </span>
-                                {idx < arrowParts.length - 1 && (
-                                  <ArrowRight className="w-4 h-4 text-slate-400 font-bold" />
-                                )}
+                              <div className="my-5 p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 via-primary/80 to-amber-50/80 border border-slate-200/90 flex flex-wrap items-center justify-center gap-3 shadow-2xs">
+                                {arrowParts.map((part, idx) => {
+                                  const colors = getConceptColorClass(part);
+                                  return (
+                                    <div key={idx} className="flex items-center gap-2">
+                                      <span className={`px-3 py-1.5 rounded-xl ${colors.badge} font-extrabold text-xs shadow-2xs uppercase tracking-wider`}>
+                                        {part}
+                                      </span>
+                                      {idx < arrowParts.length - 1 && (
+                                        <ArrowRight className="w-4 h-4 text-slate-400 font-bold" />
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             );
-                          })}
-                        </div>
-                      );
-                    }
-                  }
+                          }
+                        }
 
-                  // 3. W3Schools-Style Colored Callout Cards
-                  // 💡 Learn / Definition Box
-                  if (text.startsWith("Definition:") || text.startsWith("💡") || text.startsWith("🟦 DEFINITION")) {
-                    const cleanText = text.replace(/^(Definition:|💡 DEFINITION|🟦 DEFINITION|💡|🟦):\s*/i, "");
-                    return (
-                      <div className="my-6 rounded-2xl bg-primary/80 border-l-4 border-primary p-5 space-y-1 shadow-2xs">
-                        <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
-                          <Lightbulb className="w-4 h-4 text-primary" />
-                          💡 DEFINITION
-                        </div>
-                        <p className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
-                          {cleanText || children}
-                        </p>
-                      </div>
-                    );
-                  }
+                        if (text.startsWith("Definition:") || text.startsWith("💡") || text.startsWith("🟦 DEFINITION")) {
+                          const cleanText = text.replace(/^(Definition:|💡 DEFINITION|🟦 DEFINITION|💡|🟦):\s*/i, "");
+                          return (
+                            <div className="my-5 rounded-2xl bg-indigo-50/90 border border-indigo-200/90 border-l-4 border-indigo-600 p-5 space-y-1 shadow-2xs">
+                              <div className="flex items-center gap-2 text-indigo-700 font-bold text-xs uppercase tracking-wider">
+                                <Lightbulb className="w-4 h-4 text-indigo-600" />
+                                💡 DEFINITION
+                              </div>
+                              <p className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
+                                {cleanText || children}
+                              </p>
+                            </div>
+                          );
+                        }
 
-                  // 🧑‍🏫 In Simple Words Box
-                  if (text.startsWith("In simple words:") || text.startsWith("In simple terms:") || text.startsWith("🧑‍🏫")) {
-                    const cleanText = text.replace(/^(In simple words:|In simple terms:|🧑‍🏫 IN SIMPLE WORDS|🧑‍🏫):\s*/i, "");
-                    return (
-                      <div className="my-6 rounded-2xl bg-emerald-50/90 border-l-4 border-emerald-500 p-5 space-y-1 shadow-2xs">
-                        <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs uppercase tracking-wider">
-                          <UserCheck className="w-4 h-4 text-emerald-600" />
-                          🧑‍🏫 IN SIMPLE WORDS
-                        </div>
-                        <p className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
-                          {cleanText || children}
-                        </p>
-                      </div>
-                    );
-                  }
+                        if (text.startsWith("In simple words:") || text.startsWith("In simple terms:") || text.startsWith("🧑‍🏫")) {
+                          const cleanText = text.replace(/^(In simple words:|In simple terms:|🧑‍🏫 IN SIMPLE WORDS|🧑‍🏫):\s*/i, "");
+                          return (
+                            <div className="my-5 rounded-2xl bg-emerald-50/90 border border-emerald-200/90 border-l-4 border-emerald-500 p-5 space-y-1 shadow-2xs">
+                              <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs uppercase tracking-wider">
+                                <UserCheck className="w-4 h-4 text-emerald-600" />
+                                🧑‍🏫 IN SIMPLE WORDS
+                              </div>
+                              <p className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
+                                {cleanText || children}
+                              </p>
+                            </div>
+                          );
+                        }
 
-                  // 📌 Important Box
-                  if (text.startsWith("Important:") || text.startsWith("Remember:") || text.startsWith("📌")) {
-                    const cleanText = text.replace(/^(Important:|Remember:|📌 IMPORTANT|📌):\s*/i, "");
-                    return (
-                      <div className="my-6 rounded-2xl bg-sky-50/90 border-l-4 border-sky-500 p-5 space-y-1 shadow-2xs">
-                        <div className="flex items-center gap-2 text-sky-900 font-bold text-xs uppercase tracking-wider">
-                          <Info className="w-4 h-4 text-sky-600" />
-                          📌 IMPORTANT
-                        </div>
-                        <p className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
-                          {cleanText || children}
-                        </p>
-                      </div>
-                    );
-                  }
+                        if (text.startsWith("Important:") || text.startsWith("Remember:") || text.startsWith("📌")) {
+                          const cleanText = text.replace(/^(Important:|Remember:|📌 IMPORTANT|📌):\s*/i, "");
+                          return (
+                            <div className="my-5 rounded-2xl bg-sky-50/90 border border-sky-200/90 border-l-4 border-sky-500 p-5 space-y-1 shadow-2xs">
+                              <div className="flex items-center gap-2 text-sky-900 font-bold text-xs uppercase tracking-wider">
+                                <Info className="w-4 h-4 text-sky-600" />
+                                📌 IMPORTANT
+                              </div>
+                              <p className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
+                                {cleanText || children}
+                              </p>
+                            </div>
+                          );
+                        }
 
-                  // ⚠️ Common Mistake Box
-                  if (text.startsWith("Common mistake") || text.startsWith("Common pitfalls") || text.startsWith("⚠️")) {
-                    const cleanText = text.replace(/^(Common mistake:|Common pitfalls:|⚠️ COMMON MISTAKE|⚠️):\s*/i, "");
-                    return (
-                      <div className="my-6 rounded-2xl bg-rose-50/90 border-l-4 border-rose-500 p-5 space-y-1 shadow-2xs">
-                        <div className="flex items-center gap-2 text-rose-900 font-bold text-xs uppercase tracking-wider">
-                          <AlertTriangle className="w-4 h-4 text-rose-600" />
-                          ⚠️ COMMON MISTAKE
-                        </div>
-                        <p className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
-                          {cleanText || children}
-                        </p>
-                      </div>
-                    );
-                  }
+                        if (text.startsWith("Common mistake") || text.startsWith("Common pitfalls") || text.startsWith("⚠️")) {
+                          const cleanText = text.replace(/^(Common mistake:|Common pitfalls:|⚠️ COMMON MISTAKE|⚠️):\s*/i, "");
+                          return (
+                            <div className="my-5 rounded-2xl bg-rose-50/90 border border-rose-200/90 border-l-4 border-rose-500 p-5 space-y-1 shadow-2xs">
+                              <div className="flex items-center gap-2 text-rose-900 font-bold text-xs uppercase tracking-wider">
+                                <AlertTriangle className="w-4 h-4 text-rose-600" />
+                                ⚠️ COMMON MISTAKE
+                              </div>
+                              <p className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
+                                {cleanText || children}
+                              </p>
+                            </div>
+                          );
+                        }
 
-                  // 🔬 Why This Works Box
-                  if (text.startsWith("Why this works") || text.startsWith("🔬")) {
-                    const cleanText = text.replace(/^(Why this works:|🔬 WHY THIS WORKS|🔬):\s*/i, "");
-                    return (
-                      <div className="my-6 rounded-2xl bg-primary/90 border-l-4 border-primary p-5 space-y-1 shadow-2xs">
-                        <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
-                          <Brain className="w-4 h-4 text-primary" />
-                          🔬 WHY DO THESE EQUATIONS WORK?
-                        </div>
-                        <p className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
-                          {cleanText || children}
-                        </p>
-                      </div>
-                    );
-                  }
+                        if (text.startsWith("Why this works") || text.startsWith("🔬")) {
+                          const cleanText = text.replace(/^(Why this works:|🔬 WHY THIS WORKS|🔬):\s*/i, "");
+                          return (
+                            <div className="my-5 rounded-2xl bg-purple-50/90 border border-purple-200/90 border-l-4 border-purple-500 p-5 space-y-1 shadow-2xs">
+                              <div className="flex items-center gap-2 text-purple-900 font-bold text-xs uppercase tracking-wider">
+                                <Brain className="w-4 h-4 text-purple-600" />
+                                🔬 WHY DO THESE EQUATIONS WORK?
+                              </div>
+                              <p className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
+                                {cleanText || children}
+                              </p>
+                            </div>
+                          );
+                        }
 
-                  // 2. Colored Concept Card Block (e.g. 🟦 Position, 🟪 Velocity, 🟧 Acceleration)
-                  if (text.startsWith("🟦") || text.startsWith("🟪") || text.startsWith("🟧") || text.startsWith("🟩")) {
-                    const termName = text.substring(2).split("\n")[0].trim();
-                    const colors = getConceptColorClass(termName);
-                    return (
-                      <div className={`my-6 rounded-2xl ${colors.bg} border-l-4 ${colors.accent} p-5 space-y-2 shadow-2xs`}>
-                        <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider">
-                          <span className="text-base">{colors.icon}</span>
-                          <span className="font-extrabold">{termName}</span>
+                        if (text.startsWith("🟦") || text.startsWith("🟪") || text.startsWith("🟧") || text.startsWith("🟩")) {
+                          const termName = text.substring(2).split("\n")[0].trim();
+                          const colors = getConceptColorClass(termName);
+                          return (
+                            <div className={`my-5 rounded-2xl ${colors.bg} border-l-4 ${colors.accent} p-5 space-y-2 shadow-2xs`}>
+                              <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider">
+                                <span className="text-base">{colors.icon}</span>
+                                <span className="font-extrabold">{termName}</span>
+                              </div>
+                              <div className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
+                                {children}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <p className="mb-4 text-slate-700 leading-[1.75] font-normal text-base sm:text-[17px]">
+                            {children}
+                          </p>
+                        );
+                      },
+
+                      strong: ({ children }) => {
+                        const label = String(children);
+                        const colors = getConceptColorClass(label);
+
+                        return (
+                          <strong className={`font-bold px-1.5 py-0.5 rounded-md border text-sm sm:text-base ${colors.pill}`}>
+                            {children}
+                          </strong>
+                        );
+                      },
+
+                      code: ({ inline, children }: any) => {
+                        if (inline) {
+                          return (
+                            <code className="bg-slate-100 text-primary font-mono text-xs px-1.5 py-0.5 rounded border border-slate-200 font-bold">
+                              {children}
+                            </code>
+                          );
+                        }
+                        return (
+                          <div className="my-6 rounded-2xl bg-slate-900 text-slate-100 p-6 font-mono text-sm sm:text-base overflow-x-auto shadow-md border border-slate-800 space-y-3">
+                            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                              <div className="flex items-center gap-2 text-primary/70 font-bold text-xs uppercase tracking-wider">
+                                <Zap className="w-4 h-4 text-primary/70" />
+                                <span>🟪 Kinematic Equations & Formula Block</span>
+                              </div>
+                              <span className="text-[10px] bg-primary text-primary/40 px-2 py-0.5 rounded border border-primary font-sans font-semibold">
+                                Mathematical Formulation
+                              </span>
+                            </div>
+                            <div className="text-primary/20 font-bold text-base sm:text-lg pt-1 leading-relaxed">
+                              {children}
+                            </div>
+                          </div>
+                        );
+                      },
+
+                      table: ({ children }) => (
+                        <div className="my-6 overflow-x-auto rounded-2xl border border-slate-200/90 bg-white p-5 shadow-2xs space-y-2">
+                          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                            <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Symbol Legend & Notation Breakdown</p>
+                            <span className="text-[11px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-md">Units & Meaning</span>
+                          </div>
+                          <table className="w-full text-left text-xs sm:text-sm border-collapse">
+                            {children}
+                          </table>
                         </div>
-                        <div className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
+                      ),
+                      th: ({ children }) => (
+                        <th className="bg-slate-100/90 text-slate-800 font-bold p-3 border-b border-slate-200 uppercase text-xs tracking-wider">
                           {children}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // Standard Flowing Paragraph
-                  return (
-                    <p className="mb-5 text-slate-700 leading-[1.75] font-normal text-base sm:text-[17px]">
-                      {children}
-                    </p>
-                  );
-                },
-
-                // 1. & 11. Semantic Color Highlighting for Key Concepts in Text
-                strong: ({ children }) => {
-                  const label = String(children);
-                  const colors = getConceptColorClass(label);
-
-                  return (
-                    <strong className={`font-bold px-1.5 py-0.5 rounded-md border text-sm sm:text-base ${colors.pill}`}>
-                      {children}
-                    </strong>
-                  );
-                },
-
-                // 4. Standalone Beautiful Formula Block
-                code: ({ inline, children }: any) => {
-                  if (inline) {
-                    return (
-                      <code className="bg-slate-100 text-primary font-mono text-xs px-1.5 py-0.5 rounded border border-slate-200 font-bold">
-                        {children}
-                      </code>
-                    );
-                  }
-                  return (
-                    <div className="my-7 rounded-2xl bg-slate-900 text-slate-100 p-6 font-mono text-sm sm:text-base overflow-x-auto shadow-md border border-slate-800 space-y-3">
-                      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                        <div className="flex items-center gap-2 text-primary/70 font-bold text-xs uppercase tracking-wider">
-                          <Zap className="w-4 h-4 text-primary/70" />
-                          <span>🟪 Kinematic Equations & Formula Block</span>
-                        </div>
-                        <span className="text-[10px] bg-primary text-primary/40 px-2 py-0.5 rounded border border-primary font-sans font-semibold">
-                          Mathematical Formulation
-                        </span>
-                      </div>
-                      <div className="text-primary/20 font-bold text-base sm:text-lg pt-1 leading-relaxed">
-                        {children}
-                      </div>
-                    </div>
-                  );
-                },
-
-                // 5. Visual Symbol Breakdown Table
-                table: ({ children }) => (
-                  <div className="my-7 overflow-x-auto rounded-2xl border border-slate-200/90 bg-white p-5 shadow-2xs space-y-2">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                      <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Symbol Legend & Notation Breakdown</p>
-                      <span className="text-[11px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-md">Units & Meaning</span>
-                    </div>
-                    <table className="w-full text-left text-xs sm:text-sm border-collapse">
-                      {children}
-                    </table>
-                  </div>
-                ),
-                th: ({ children }) => (
-                  <th className="bg-slate-100/90 text-slate-800 font-bold p-3 border-b border-slate-200 uppercase text-xs tracking-wider">
-                    {children}
-                  </th>
-                ),
-                td: ({ children }) => {
-                  const text = String(children);
-                  // Highlight Units in badges
-                  if (/^(m\/s|m\/s²|s|N|kg|m)$/i.test(text.trim())) {
-                    return (
-                      <td className="p-3 border-b border-slate-100 text-primary font-mono font-bold text-xs">
-                        <span className="bg-primary/5 px-2 py-0.5 rounded border border-primary/20">
-                          {children}
-                        </span>
-                      </td>
-                    );
-                  }
-                  return (
-                    <td className="p-3 border-b border-slate-100 text-slate-700 font-medium">
-                      {children}
-                    </td>
-                  );
-                },
-              }}
-            >
-              {lesson.explanation}
-            </ReactMarkdown>
+                        </th>
+                      ),
+                      td: ({ children }) => {
+                        const text = String(children);
+                        if (/^(m\/s|m\/s²|s|N|kg|m)$/i.test(text.trim())) {
+                          return (
+                            <td className="p-3 border-b border-slate-100 text-primary font-mono font-bold text-xs">
+                              <span className="bg-primary/5 px-2 py-0.5 rounded border border-primary/20">
+                                {children}
+                              </span>
+                            </td>
+                          );
+                        }
+                        return (
+                          <td className="p-3 border-b border-slate-100 text-slate-700 font-medium">
+                            {children}
+                          </td>
+                        );
+                      },
+                    }}
+                  >
+                    {paraText}
+                  </ReactMarkdown>
+                </div>
+              );
+            })}
           </div>
 
           {/* First Inline Visual Image (Interleaved directly in content flow) */}

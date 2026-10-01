@@ -77,9 +77,10 @@ export function MobileUploadView({
         <div className="fixed bottom-20 inset-x-4 z-30">
           <button
             onClick={() => handleTabChange("tutor")}
-            className="w-full py-3.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg hover:bg-emerald-700 transition-colors"
+            className="w-full py-3.5 bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 text-white rounded-xl text-sm font-extrabold shadow-xl hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center justify-center gap-2 active:scale-98"
           >
-            Continue to AI Tutor
+            <span>Continue to AI Tutor</span>
+            <Sparkles className="w-4 h-4 fill-current text-amber-300" />
           </button>
         </div>
       )}
@@ -245,6 +246,15 @@ export function MobileUploadView({
                         Remove
                       </button>
                     </div>
+
+                    {showSuccess && (
+                      <button
+                        onClick={() => handleTabChange("tutor")}
+                        className="mt-3 w-full py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-extrabold shadow-xs hover:opacity-95 transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <span>Start AI Lesson Now →</span>
+                      </button>
+                    )}
                   </div>
                 );
               })}

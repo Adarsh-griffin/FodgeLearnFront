@@ -210,6 +210,8 @@ export interface LessonStep {
   example: string;
   checkpoint_question: string;
   images: string[];
+  audio_url?: string;
+  audioUrl?: string;
   step_index: number;
   total_steps: number;
 }
@@ -471,6 +473,29 @@ class ApiService {
     }
 
     const data: TTSResponse = await response.json();
+    return data.audio_url;
+  }
+
+  // On-demand TTS for AI Tutor lesson
+  async getTutorTTS(text: string, topicId: string, fileId: string, customHeaders: Record<string, string> = {}): Promise<string> {
+    const response = await fetch(`${this.baseURL}/api/tutor/tts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...customHeaders,
+      },
+      body: JSON.stringify({ text, topicId, fileId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to synthesize tutor speech');
+    }
+
+    const data = await response.json();
+    if (!data.audio_url) {
+      throw new Error('No audio_url returned from server');
+    }
     return data.audio_url;
   }
 

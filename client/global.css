@@ -29,22 +29,22 @@
        (badges, soft highlight backgrounds), never as a background behind
        white text or as a text-gradient endpoint, where it would vanish. */
     --background: 0 0% 100%;
-    --foreground: 160 20% 12%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 160 20% 12%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 160 20% 12%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 158 64% 24%;
+    --primary: 243 75% 59%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 150 20% 96%;
-    --secondary-foreground: 158 35% 20%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 150 12% 95%;
-    --muted-foreground: 160 8% 44%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 16% 47%;
 
     --accent: 17 100% 68%;
     --accent-foreground: 20 60% 15%;
@@ -52,14 +52,6 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
 
-    /* Semantic status colors - previously every "correct answer" or
-       "quota warning" surface reached for a raw Tailwind green/amber
-       class or a hardcoded hex (see the old .correct-box/.incorrect-box
-       rules below), untethered from the brand palette. These are the one
-       source of truth for success/warning/info everywhere. success is
-       intentionally a different, more saturated green than --primary so
-       "this is the brand color" and "this answer was correct" stay
-       visually distinct even though both are green-family. */
     --success: 142 71% 42%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
@@ -67,43 +59,31 @@
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
-    --border: 150 15% 89%;
-    --input: 150 15% 94%;
-    --ring: 158 64% 24%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 243 75% 59%;
 
     --radius: 0.875rem;
 
-    --sidebar-background: 160 45% 10%;
-
-    --sidebar-foreground: 150 20% 92%;
-
-    --sidebar-primary: 158 64% 24%;
-
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 243 75% 59%;
     --sidebar-primary-foreground: 0 0% 100%;
-
     --sidebar-accent: 17 100% 68%;
-
     --sidebar-accent-foreground: 20 60% 15%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 243 75% 59%;
 
-    --sidebar-border: 160 30% 22%;
-
-    --sidebar-ring: 158 64% 24%;
-
-    /* Brand orange - premium highlights (badges, remediation banners) */
+    /* Brand orange - premium highlights */
     --gold: 17 100% 68%;
     --gold-foreground: 20 60% 15%;
 
-    /* Brand dark-neutral and cream, for surfaces that want the exact swatch
-       rather than a semantic slot above (a dark hero panel, a light warm
-       badge). "navy" now names a deep forest-charcoal, not a blue - kept
-       the variable name so every existing bg-navy/text-navy usage just
-       picks up the new color with no call-site changes. */
-    --navy: 160 45% 10%;
-    --navy-foreground: 150 20% 92%;
+    --navy: 222 47% 11%;
+    --navy-foreground: 210 40% 98%;
     --cream: 40 100% 89%;
     --cream-foreground: 25 50% 20%;
 
-    --button-lavender: 158 64% 24%;
+    --button-lavender: 243 75% 59%;
   }
 
   .dark {
