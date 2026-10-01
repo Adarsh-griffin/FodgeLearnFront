@@ -29,7 +29,7 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
 
 /**
  * The one button in the app - every screen previously hand-rolled its own
- * button className (primary gradient here, bare indigo-600 there, uppercase
+ * button className (primary gradient here, bare primary there, uppercase
  * in one place and sentence case in another). Variants map 1:1 to the
  * hierarchy the design system calls for: primary (the one action per
  * screen), secondary (bordered/neutral), tertiary (minimal/text), destructive.

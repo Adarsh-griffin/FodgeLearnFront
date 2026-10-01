@@ -20,7 +20,7 @@ export function MobileBottomNav({
         <button
           onClick={() => navigate("/")}
           className={`flex flex-col items-center gap-0.5 text-[11px] font-semibold transition-colors ${
-            activeTab === "home" ? "text-indigo-600 font-extrabold" : "text-slate-500 hover:text-indigo-600"
+            activeTab === "home" ? "text-primary font-extrabold" : "text-slate-500 hover:text-primary"
           }`}
         >
           <Home className="w-5 h-5" />
@@ -35,7 +35,7 @@ export function MobileBottomNav({
         <button
           onClick={() => handleTabChange("tutor")}
           className={`flex flex-col items-center gap-0.5 text-[11px] font-semibold transition-colors ${
-            activeTab === "tutor" ? "text-indigo-600 font-extrabold" : "text-slate-500 hover:text-indigo-600"
+            activeTab === "tutor" ? "text-primary font-extrabold" : "text-slate-500 hover:text-primary"
           }`}
         >
           <BookOpen className="w-5 h-5" />
@@ -67,7 +67,7 @@ export function MobileBottomNav({
         <button
           onClick={() => handleTabChange("learning")}
           className={`flex flex-col items-center gap-0.5 text-[11px] font-semibold transition-colors ${
-            activeTab === "learning" ? "text-indigo-600 font-extrabold" : "text-slate-500 hover:text-indigo-600"
+            activeTab === "learning" ? "text-primary font-extrabold" : "text-slate-500 hover:text-primary"
           }`}
         >
           <FileText className="w-5 h-5" />
@@ -80,7 +80,7 @@ export function MobileBottomNav({
         <button
           onClick={() => handleTabChange("assessment")}
           className={`flex flex-col items-center gap-0.5 text-[11px] font-semibold transition-colors ${
-            activeTab === "assessment" ? "text-indigo-600 font-extrabold" : "text-slate-500 hover:text-indigo-600"
+            activeTab === "assessment" ? "text-primary font-extrabold" : "text-slate-500 hover:text-primary"
           }`}
         >
           <ClipboardCheck className="w-5 h-5" />

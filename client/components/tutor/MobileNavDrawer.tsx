@@ -59,7 +59,7 @@ export function MobileNavDrawer({
       {/* Drawer Panel */}
       <aside className="relative w-4/5 max-w-xs bg-white h-full flex flex-col z-10 shadow-2xl overflow-y-auto hide-scrollbar animate-in slide-in-from-left duration-300">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <img src="/navbarlogo.png" alt="Learnfodge" className="h-7 w-auto object-contain" />
+          <img src="/navbarlogo.png" alt="LearnForge" className="h-7 w-auto object-contain" />
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
             <X className="w-5 h-5" />
           </button>
@@ -76,11 +76,11 @@ export function MobileNavDrawer({
                 onClick={item.action}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   isActive
-                    ? "bg-indigo-50 text-indigo-600 shadow-2xs"
+                    ? "bg-primary/5 text-primary shadow-2xs"
                     : "text-slate-600 hover:bg-slate-50"
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? "text-indigo-600" : "text-slate-400"}`} />
+                <Icon className={`w-4 h-4 ${isActive ? "text-primary" : "text-slate-400"}`} />
                 <span>{item.label}</span>
               </button>
             );
@@ -103,7 +103,7 @@ export function MobileNavDrawer({
             {onChangeDocument && (
               <button
                 onClick={() => { onChangeDocument(); onClose(); }}
-                className="text-[11px] font-semibold text-indigo-600 hover:underline text-left pt-1"
+                className="text-[11px] font-semibold text-primary hover:underline text-left pt-1"
               >
                 Change document
               </button>
@@ -124,7 +124,7 @@ export function MobileNavDrawer({
                     key={step.topic_id}
                     className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs transition-all ${
                       isCurrent
-                        ? "bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100"
+                        ? "bg-primary/5 text-primary font-semibold border border-primary/10"
                         : isDone
                         ? "text-slate-700"
                         : "text-slate-400"
@@ -133,8 +133,8 @@ export function MobileNavDrawer({
                     {isDone ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                     ) : isCurrent ? (
-                      <span className="w-4 h-4 rounded-full border-2 border-indigo-600 flex-shrink-0 flex items-center justify-center bg-white">
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                      <span className="w-4 h-4 rounded-full border-2 border-primary flex-shrink-0 flex items-center justify-center bg-white">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                       </span>
                     ) : (
                       <Circle className="w-4 h-4 text-slate-300 flex-shrink-0" />

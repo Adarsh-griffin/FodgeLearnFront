@@ -1,11 +1,10 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthGateModal } from "@/components/AuthGateModal";
 import { useReturningStatus } from "@/lib/useReturningStatus";
+import { useAuthGate } from "@/lib/AuthGateContext";
 
 export function Navigation() {
   const navigate = useNavigate();
-  const [showAuthGate, setShowAuthGate] = useState(false);
+  const { openAuthGate } = useAuthGate();
   // Backed by actual saved AI Tutor progress on the server, not just "is
   // this browser identified" - see useReturningStatus for why that
   // distinction matters (deleting student_profiles in Mongo should send a
@@ -19,7 +18,7 @@ export function Navigation() {
     if (isReturning) {
       navigate("/study");
     } else {
-      setShowAuthGate(true);
+      openAuthGate();
     }
   };
 
@@ -30,7 +29,7 @@ export function Navigation() {
           <div className="flex justify-between items-center">
             {/* Logo */}
             <Link to="/" className="flex items-center">
-              <img src="/navbarlogo.png" alt="LearnFordge" className="h-6 sm:h-7 w-auto" />
+              <img src="/navbarlogo.png" alt="LearnForge" className="h-6 sm:h-7 w-auto" />
             </Link>
 
             {/* Always visible - there's only one nav action, so no hamburger needed */}
@@ -43,8 +42,6 @@ export function Navigation() {
           </div>
         </div>
       </div>
-
-      <AuthGateModal isOpen={showAuthGate} onClose={() => setShowAuthGate(false)} />
     </div>
   );
 }

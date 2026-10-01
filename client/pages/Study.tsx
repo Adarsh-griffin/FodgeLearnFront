@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap, HelpCircle, BarChart3, ArrowRight, Lightbulb, Library, UploadCloud, Presentation, FileType } from "lucide-react";
 import { TutorTab } from "@/components/tutor/TutorTab";
+import { UserMenu } from "@/components/UserMenu";
 import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
 import { MobileUploadView } from "@/components/tutor/MobileUploadView";
 import { MobileBottomNav } from "@/components/tutor/MobileBottomNav";
@@ -201,8 +202,8 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                 {/* Desktop welcome card */}
                 <div className="hidden lg:block bg-white rounded-xl shadow-lg p-8">
                   <div className="text-center">
-                    <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <FileText size={40} className="text-indigo-600" />
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <FileText size={40} className="text-primary" />
                     </div>
                     <h2 className="text-3xl font-bold text-gray-800 mb-4">Ready for Assessment?</h2>
                     <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
@@ -215,7 +216,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                         <button
                           onClick={() => generateQuestion('theoretical')}
                           disabled={generatingType !== null}
-                          className="flex-1 px-6 py-4 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          className="flex-1 px-6 py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                           {generatingType === 'theoretical' ? (
                             <>
@@ -233,7 +234,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                         <button
                           onClick={() => generateQuestion('mcq')}
                           disabled={generatingType !== null}
-                          className="flex-1 px-6 py-4 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          className="flex-1 px-6 py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                           {generatingType === 'mcq' ? (
                             <>
@@ -289,9 +290,9 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                     <button
                       onClick={() => generateQuestion('theoretical')}
                       disabled={generatingType !== null}
-                      className="w-full flex items-center gap-3.5 p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-left disabled:opacity-60 transition-colors hover:bg-indigo-50"
+                      className="w-full flex items-center gap-3.5 p-4 rounded-2xl bg-primary/70 border border-primary/10 text-left disabled:opacity-60 transition-colors hover:bg-primary/5"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-white text-indigo-600 flex items-center justify-center shadow-xs flex-shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-white text-primary flex items-center justify-center shadow-xs flex-shrink-0">
                         <FileText className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -300,9 +301,9 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                       </div>
                       <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center flex-shrink-0">
                         {generatingType === 'theoretical' ? (
-                          <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                         ) : (
-                          <ArrowRight className="w-4 h-4 text-indigo-600" />
+                          <ArrowRight className="w-4 h-4 text-primary" />
                         )}
                       </div>
                     </button>
@@ -310,9 +311,9 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                     <button
                       onClick={() => generateQuestion('mcq')}
                       disabled={generatingType !== null}
-                      className="w-full flex items-center gap-3.5 p-4 rounded-2xl bg-purple-50/70 border border-purple-100 text-left disabled:opacity-60 transition-colors hover:bg-purple-50"
+                      className="w-full flex items-center gap-3.5 p-4 rounded-2xl bg-primary/70 border border-primary/10 text-left disabled:opacity-60 transition-colors hover:bg-primary/5"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-white text-purple-600 flex items-center justify-center shadow-xs flex-shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-white text-primary flex items-center justify-center shadow-xs flex-shrink-0">
                         <CheckCircle className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -321,9 +322,9 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                       </div>
                       <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center flex-shrink-0">
                         {generatingType === 'mcq' ? (
-                          <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                         ) : (
-                          <ArrowRight className="w-4 h-4 text-purple-600" />
+                          <ArrowRight className="w-4 h-4 text-primary" />
                         )}
                       </div>
                     </button>
@@ -375,13 +376,13 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                       <div className="bg-white rounded-xl shadow-lg p-8">
                         <div className="mb-6">
                           <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">
+                            <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
                               1
                             </div>
                             <h2 className="text-xl font-semibold text-gray-800">Generated Question</h2>
                           </div>
 
-                          <div className="bg-gray-50 rounded-lg p-6 border-l-4 border-indigo-500">
+                          <div className="bg-gray-50 rounded-lg p-6 border-l-4 border-primary">
                             <div className="text-lg text-gray-800 leading-relaxed prose prose-indigo max-w-none">
                               <div className="response-container">
                                 <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeRaw, rehypeKatex]}>
@@ -427,7 +428,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                                   <div className="flex gap-2">
                                     <button
                                       onClick={() => setShowHint(!showHint)}
-                                      className="text-sm font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                                      className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-1"
                                     >
                                       {showHint ? <EyeOff size={16} /> : <Eye size={16} />}
                                       {showHint ? 'Hide Hint' : 'Need a Hint?'}
@@ -489,7 +490,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                             <div className="flex gap-4">
                               <button
                                 onClick={startAnswering}
-                                className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                                className="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
                               >
                                 <CheckCircle size={20} />
                                 Start Answering
@@ -513,13 +514,13 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                       <div className="bg-white rounded-xl shadow-lg p-8">
                         <div className="mb-6">
                           <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">
+                            <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
                               2
                             </div>
                             <h2 className="text-xl font-semibold text-gray-800">Your Answer</h2>
                           </div>
 
-                          <div className="bg-gray-50 rounded-lg p-4 mb-6 border-l-4 border-indigo-500">
+                          <div className="bg-gray-50 rounded-lg p-4 mb-6 border-l-4 border-primary">
                             <p className="text-sm text-gray-600 mb-2">Question:</p>
                             <div className="text-gray-800 prose prose-sm max-w-none">
                               <div className="response-container">
@@ -537,7 +538,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                                 value={userAnswer}
                                 onChange={(e) => setUserAnswer(e.target.value)}
                                 placeholder="Type your answer here..."
-                                className="w-full p-4 border border-gray-300 rounded-lg text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                className="w-full p-4 border border-gray-300 rounded-lg text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                                 rows={6}
                               />
                             </label>
@@ -548,7 +549,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                           <button
                             onClick={submitAnswer}
                             disabled={isLoading || !userAnswer.trim()}
-                            className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                           >
                             {isLoading ? (
                               <>
@@ -621,7 +622,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                               <h2 className="text-xl font-semibold text-gray-800">Assessment Feedback</h2>
                             </div>
 
-                            <div className="bg-gray-50 rounded-lg p-4 mb-6 border-l-4 border-indigo-500">
+                            <div className="bg-gray-50 rounded-lg p-4 mb-6 border-l-4 border-primary">
                               <p className="text-sm text-gray-600 mb-2">Question:</p>
                               <div className="text-gray-800 mb-4 prose prose-sm max-w-none">
                                 <div className="response-container">
@@ -652,7 +653,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                           <div className="flex gap-4">
                             <button
                               onClick={resetAssessment}
-                              className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                              className="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
                             >
                               <RotateCcw size={20} />
                               New Assessment
@@ -708,7 +709,7 @@ function TopicInputForm({
   return (
     <form onSubmit={handleSubmit} className="mt-4 flex flex-col sm:flex-row gap-3">
       <div className="relative flex-1">
-        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-indigo-400">
+        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-primary/70">
           <BookOpen className="w-5 h-5" />
         </div>
         <input
@@ -716,7 +717,7 @@ function TopicInputForm({
           value={topicName}
           onChange={(e) => setTopicName(e.target.value)}
           placeholder="e.g. Quantum Computing, Photosynthesis, Neural Networks..."
-          className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
+          className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-sm"
         />
       </div>
       <button
@@ -1098,7 +1099,7 @@ startxref
           <div className="max-w-3xl mx-auto">
             <h1 className="text-2xl font-bold text-slate-900 mb-1">Upload Documents</h1>
             <p className="text-sm text-slate-500 mb-8">
-              Upload your study material and let LearnFordge turn it into a personalized learning experience.
+              Upload your study material and let LearnForge turn it into a personalized learning experience.
             </p>
 
             <div
@@ -1120,13 +1121,13 @@ startxref
               <div className="hidden sm:flex absolute top-10 right-12 w-11 h-11 rounded-xl bg-white shadow-md border border-amber-100 items-center justify-center rotate-6">
                 <Presentation className="w-5 h-5 text-amber-500" />
               </div>
-              <div className="hidden sm:flex absolute bottom-8 right-20 w-11 h-11 rounded-xl bg-white shadow-md border border-purple-100 items-center justify-center -rotate-6">
-                <FileText className="w-5 h-5 text-purple-500" />
+              <div className="hidden sm:flex absolute bottom-8 right-20 w-11 h-11 rounded-xl bg-white shadow-md border border-primary/10 items-center justify-center -rotate-6">
+                <FileText className="w-5 h-5 text-primary" />
               </div>
 
               <div className="relative mb-4">
-                <div className="w-16 h-16 rounded-2xl bg-indigo-100/80 text-indigo-600 flex items-center justify-center mx-auto">
-                  <UploadCloud className={`w-8 h-8 ${isDragging ? "text-indigo-700" : "text-indigo-600"}`} />
+                <div className="w-16 h-16 rounded-2xl bg-primary/80 text-primary flex items-center justify-center mx-auto">
+                  <UploadCloud className={`w-8 h-8 ${isDragging ? "text-primary" : "text-primary"}`} />
                 </div>
               </div>
               <h3 className="relative text-xl font-bold text-slate-900 mb-1">
@@ -1168,7 +1169,7 @@ startxref
             {/* Topic Input Box */}
             <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shadow-md flex-shrink-0">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
@@ -1279,7 +1280,7 @@ startxref
 
             <div className="mt-8 rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-primary/5 text-primary flex items-center justify-center flex-shrink-0">
                   <FileText className="w-4.5 h-4.5" />
                 </div>
                 <div>
@@ -1302,8 +1303,8 @@ startxref
                   <p className="text-sm font-bold text-slate-900">Max 50MB per file</p>
                   <p className="text-xs text-slate-500 mt-0.5">Upload multiple files at once</p>
                 </div>
-                <div className="rounded-xl bg-purple-50/60 border border-purple-100 p-4">
-                  <div className="w-9 h-9 rounded-lg bg-white text-purple-600 flex items-center justify-center shadow-xs mb-3">
+                <div className="rounded-xl bg-primary/60 border border-primary/10 p-4">
+                  <div className="w-9 h-9 rounded-lg bg-white text-primary flex items-center justify-center shadow-xs mb-3">
                     <Library className="w-4.5 h-4.5" />
                   </div>
                   <p className="text-sm font-bold text-slate-900">Multiple files</p>
@@ -2203,7 +2204,7 @@ startxref
                 className="border-r border-gray-200 flex flex-col min-w-0 min-h-0"
                 style={{ width: `${sectionWidths[1]}%` }}
               >
-                <div className="p-4 border-b border-gray-200 bg-indigo-50 flex-shrink-0">
+                <div className="p-4 border-b border-gray-200 bg-primary/5 flex-shrink-0">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-gray-800">AI Tutor</h4>
                     <div className="flex items-center gap-2">
@@ -2216,9 +2217,9 @@ startxref
                   </div>
                 </div>
 
-                <div className="flex-1 bg-indigo-50 flex flex-col min-h-0">
+                <div className="flex-1 bg-primary/5 flex flex-col min-h-0">
                   {/* File Selector - Fixed at top */}
-                  <div className="p-4 pb-2 bg-indigo-50 flex-shrink-0">
+                  <div className="p-4 pb-2 bg-primary/5 flex-shrink-0">
                     <div className="bg-white rounded-lg p-3 border">
                       <div className="flex items-center gap-3">
                         <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
@@ -2228,7 +2229,7 @@ startxref
                           value={selectedFile}
                           onChange={(e) => setSelectedFile(e.target.value)}
                           disabled={filesLoading}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                         >
                           {filesLoading ? (
                             <option>Loading files...</option>
@@ -2273,7 +2274,7 @@ startxref
                             }
                           }}
                           disabled={filesLoading}
-                          className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors disabled:opacity-50"
+                          className="text-xs px-2 py-1 bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors disabled:opacity-50"
                           title="Refresh file list"
                         >
                           🔄
@@ -2297,7 +2298,7 @@ startxref
                         >
                           <div
                             className={`max-w-[80%] rounded-lg px-3 py-2 ${message.type === 'user'
-                              ? 'bg-indigo-600 text-white'
+                              ? 'bg-primary text-white'
                               : 'bg-white text-gray-800 border'
                               }`}
                           >
@@ -2308,7 +2309,7 @@ startxref
                                 </ReactMarkdown>
                               </div>
                             </div>
-                            <p className={`text-xs mt-1 ${message.type === 'user' ? 'text-indigo-100' : 'text-gray-500'
+                            <p className={`text-xs mt-1 ${message.type === 'user' ? 'text-primary/10' : 'text-gray-500'
                               }`}>
                               {message.timestamp.toLocaleTimeString()}
                             </p>
@@ -2319,9 +2320,9 @@ startxref
                         <div className="flex justify-start">
                           <div className="bg-white rounded-lg px-3 py-2 border">
                             <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"></div>
-                              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                              <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                             </div>
                           </div>
                         </div>
@@ -2343,7 +2344,7 @@ startxref
                         }
                       }}
                       disabled={isProcessing}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                     />
 
                     {/* Mic Button */}
@@ -2372,7 +2373,7 @@ startxref
                     <button
                       onClick={sendTextMessage}
                       disabled={isProcessing || !currentMessage.trim()}
-                      className="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                      className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
                       title="Send message"
                     >
                       <span className="text-sm">↑</span>
@@ -2514,9 +2515,7 @@ startxref
             </div>
           )}
 
-          <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center">
-            A
-          </div>
+          <UserMenu />
         </div>
       </div>
 

@@ -560,6 +560,18 @@ class ApiService {
     return !!data.hasProfile;
   }
 
+  /** "Delete Profile" in the account menu - wipes all saved AI Tutor progress for this identity. */
+  async deleteTutorProfile(authHeaders: Record<string, string>): Promise<void> {
+    const response = await fetch(`${this.baseURL}/api/tutor/profile`, {
+      method: 'DELETE',
+      headers: authHeaders,
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to delete profile');
+    }
+  }
+
   /**
    * Lets TutorTab resume wherever this student left off for this document
    * (roadmap or an in-progress lesson) instead of always restarting at

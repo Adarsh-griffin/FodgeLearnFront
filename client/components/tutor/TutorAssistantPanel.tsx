@@ -179,7 +179,7 @@ export function TutorAssistantPanel({
       {/* Header */}
       <div className="p-4 border-b border-slate-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-indigo-600" />
+          <Sparkles className="w-4 h-4 text-primary" />
           <span className="font-bold text-slate-900 text-sm">AI Tutor</span>
         </div>
         <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20">
@@ -214,10 +214,10 @@ export function TutorAssistantPanel({
       <div className="p-4 border-b border-slate-100 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
             <p className="text-xs font-bold text-slate-900">Your Understanding</p>
           </div>
-          <span className="text-[11px] font-semibold text-indigo-600 hover:underline cursor-pointer">
+          <span className="text-[11px] font-semibold text-primary hover:underline cursor-pointer">
             View details →
           </span>
         </div>
@@ -229,7 +229,7 @@ export function TutorAssistantPanel({
             const pct = Math.round(step.mastery * 100);
             
             // Custom colors for progress bars based on completion
-            const barColor = pct >= 70 ? "bg-emerald-500" : pct >= 40 ? "bg-indigo-500" : pct > 0 ? "bg-amber-400" : "bg-slate-200";
+            const barColor = pct >= 70 ? "bg-emerald-500" : pct >= 40 ? "bg-primary" : pct > 0 ? "bg-amber-400" : "bg-slate-200";
 
             return (
               <div key={step.topic_id} className="space-y-1">
@@ -282,7 +282,7 @@ export function TutorAssistantPanel({
               <div
                 className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
                   m.role === "user"
-                    ? "bg-indigo-600 text-white rounded-br-none"
+                    ? "bg-primary text-white rounded-br-none"
                     : "bg-slate-100 text-slate-800 border border-slate-200/60 rounded-bl-none"
                 }`}
               >
@@ -291,7 +291,7 @@ export function TutorAssistantPanel({
                   <button
                     onClick={() => handleSpeakMessage(m)}
                     disabled={speakingId === m.id}
-                    className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-indigo-600 hover:underline disabled:opacity-50"
+                    className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline disabled:opacity-50"
                   >
                     <Volume2 className="w-3 h-3" />
                     {speakingId === m.id ? "Playing..." : "Listen"}
@@ -304,7 +304,7 @@ export function TutorAssistantPanel({
           {isSending && (
             <div className="flex justify-start">
               <div className="bg-slate-100 rounded-2xl px-3.5 py-2.5 border border-slate-200/60">
-                <div className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             </div>
           )}
@@ -318,7 +318,7 @@ export function TutorAssistantPanel({
               key={item.label}
               onClick={() => sendQuestion(item.action)}
               disabled={isSending}
-              className="text-[11px] font-medium px-2.5 py-1 rounded-full border border-slate-200 text-slate-600 hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-600 transition-all disabled:opacity-40"
+              className="text-[11px] font-medium px-2.5 py-1 rounded-full border border-slate-200 text-slate-600 hover:border-primary/40 hover:bg-primary/50 hover:text-primary transition-all disabled:opacity-40"
             >
               {item.label}
             </button>
@@ -333,7 +333,7 @@ export function TutorAssistantPanel({
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             disabled={isSending || isRecording}
             placeholder="Ask anything about this topic..."
-            className="flex-1 min-w-0 border border-slate-200 rounded-full px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/60"
+            className="flex-1 min-w-0 border border-slate-200 rounded-full px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary bg-slate-50/60"
           />
 
           {!isRecording ? (
@@ -358,7 +358,7 @@ export function TutorAssistantPanel({
           <button
             onClick={handleSend}
             disabled={!input.trim() || isSending || isRecording}
-            className="w-8 h-8 flex-shrink-0 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 flex items-center justify-center disabled:opacity-40 transition-colors shadow-xs"
+            className="w-8 h-8 flex-shrink-0 rounded-full bg-primary text-white hover:bg-primary/90 flex items-center justify-center disabled:opacity-40 transition-colors shadow-xs"
           >
             <Send className="w-3.5 h-3.5" />
           </button>

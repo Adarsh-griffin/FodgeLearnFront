@@ -13,6 +13,7 @@ import { MobileBottomNav } from "./MobileBottomNav";
 import { MobileTutorSheet } from "./MobileTutorSheet";
 import { MobileNavDrawer } from "./MobileNavDrawer";
 import { TutorLoadingScreen } from "./TutorLoadingScreen";
+import { UserMenu } from "@/components/UserMenu";
 
 type Stage = "loading" | "select_file" | "onboarding" | "diagnostic" | "generating_plan" | "roadmap" | "lesson" | "complete";
 
@@ -169,7 +170,7 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
           onChangeDocument={handleChangeDocument}
         />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-4 sm:p-8 text-center overflow-y-auto">
-          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Which document do you want to learn?</h2>
@@ -182,9 +183,9 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
                 <button
                   key={f._id}
                   onClick={() => handleSelectFile(f)}
-                  className="w-full flex items-center gap-3 p-3.5 bg-white rounded-xl border border-slate-200/80 hover:border-indigo-400 hover:shadow-sm transition-all text-left group"
+                  className="w-full flex items-center gap-3 p-3.5 bg-white rounded-xl border border-slate-200/80 hover:border-primary/70 hover:shadow-sm transition-all text-left group"
                 >
-                  <FileText className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 flex-shrink-0 transition-colors" />
+                  <FileText className="w-4 h-4 text-slate-400 group-hover:text-primary flex-shrink-0 transition-colors" />
                   <span className="text-sm font-medium text-slate-800 truncate">{f.originalName}</span>
                 </button>
               ))}
@@ -194,7 +195,7 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
             <p className="text-xs text-slate-400 mt-2">
               Progress saved on this device.{" "}
               <SignInButton mode="modal" forceRedirectUrl="/study">
-                <button className="text-indigo-600 hover:underline font-semibold">Sign in to sync</button>
+                <button className="text-primary hover:underline font-semibold">Sign in to sync</button>
               </SignInButton>
             </p>
           )}
@@ -216,22 +217,20 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <img src="/navbarlogo.png" alt="Learnfodge" className="h-6 w-auto object-contain" />
+          <img src="/navbarlogo.png" alt="LearnForge" className="h-6 w-auto object-contain" />
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsMobileTutorSheetOpen(true)}
-            className="p-2 text-slate-500 hover:text-indigo-600 rounded-full hover:bg-slate-100 transition-colors"
+            className="p-2 text-slate-500 hover:text-primary rounded-full hover:bg-slate-100 transition-colors"
           >
             <Search className="w-4 h-4" />
           </button>
-          <button className="p-2 text-slate-500 hover:text-indigo-600 rounded-full hover:bg-slate-100 transition-colors">
+          <button className="p-2 text-slate-500 hover:text-primary rounded-full hover:bg-slate-100 transition-colors">
             <Bell className="w-4 h-4" />
           </button>
-          <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-            A
-          </div>
+          <UserMenu />
         </div>
       </div>
 
@@ -306,7 +305,7 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
               </p>
               <button
                 onClick={() => setStage("onboarding")}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-md"
+                className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-md"
               >
                 Start New Session
               </button>

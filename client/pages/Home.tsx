@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import { AnimatedHeroOverlay } from "@/components/AnimatedHeroOverlay";
-import { AuthGateModal } from "@/components/AuthGateModal";
 import { useReturningStatus } from "@/lib/useReturningStatus";
+import { useAuthGate } from "@/lib/AuthGateContext";
 import { useEffect, useRef, useState } from "react";
 
 const FLOW_ITEMS = [
@@ -39,7 +39,7 @@ const FLOW_ITEMS = [
 export function Home() {
   const [activeSection, setActiveSection] = useState(0);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const [showAuthGate, setShowAuthGate] = useState(false);
+  const { openAuthGate } = useAuthGate();
   const navigate = useNavigate();
 
   // Backed by actual saved AI Tutor progress on the server - see
@@ -52,7 +52,7 @@ export function Home() {
     if (isReturning) {
       navigate("/study");
     } else {
-      setShowAuthGate(true);
+      openAuthGate();
     }
   };
 
@@ -94,7 +94,7 @@ export function Home() {
               Learn anything, <span className="gradient-brand bg-clip-text text-transparent">the smart way</span>
             </h1>
             <p className="text-base sm:text-lg text-muted-foreground mb-8 leading-relaxed max-w-xl">
-              LearnFordge provides a completely interactive and adaptive learning experience. We use AI to manage and
+              LearnForge provides a completely interactive and adaptive learning experience. We use AI to manage and
               customize your educational journey, ensuring that every piece of content, every quiz, and every
               challenge is perfectly matched to your current skill level and goals.
             </p>
@@ -132,7 +132,7 @@ export function Home() {
         <div className="bg-secondary rounded-2xl p-4 sm:p-6 mb-16 sm:mb-24">
           <img
             src="/how it works image/main.png"
-            alt="LearnFordge main interface"
+            alt="LearnForge main interface"
             className="w-full h-auto rounded-xl shadow-premium"
           />
         </div>
@@ -216,8 +216,6 @@ export function Home() {
           </button>
         </div>
       </section>
-
-      <AuthGateModal isOpen={showAuthGate} onClose={() => setShowAuthGate(false)} />
     </div>
   );
 }

@@ -58,10 +58,10 @@ const getConceptColorClass = (term: string) => {
   }
   if (t.includes("velocity") || t.includes("speed") || t.includes("rate of change")) {
     return {
-      badge: "bg-purple-600 text-white",
-      bg: "bg-purple-50/90 border-purple-200 text-purple-950",
-      pill: "bg-purple-100/80 text-purple-900 border-purple-300 font-bold",
-      accent: "border-purple-500",
+      badge: "bg-primary text-white",
+      bg: "bg-primary/90 border-primary/20 text-primary",
+      pill: "bg-primary/80 text-primary border-primary/40 font-bold",
+      accent: "border-primary",
       icon: "🟪"
     };
   }
@@ -84,10 +84,10 @@ const getConceptColorClass = (term: string) => {
     };
   }
   return {
-    badge: "bg-indigo-600 text-white",
-    bg: "bg-indigo-50/90 border-indigo-200 text-indigo-950",
-    pill: "bg-indigo-100/80 text-indigo-900 border-indigo-300 font-bold",
-    accent: "border-indigo-500",
+    badge: "bg-primary text-white",
+    bg: "bg-primary/90 border-primary/20 text-primary",
+    pill: "bg-primary/80 text-primary border-primary/40 font-bold",
+    accent: "border-primary",
     icon: "🟪"
   };
 };
@@ -200,7 +200,7 @@ export function LessonView({
         <p className="text-sm font-semibold text-rose-600">{error}</p>
         <button 
           onClick={loadLesson} 
-          className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-700 transition-colors"
+          className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-semibold hover:bg-primary/90 transition-colors"
         >
           Try Again
         </button>
@@ -260,7 +260,7 @@ export function LessonView({
             <span className="text-slate-300">/</span>
             <span className="text-slate-500">{goal}</span>
             <span className="text-slate-300">/</span>
-            <span className="text-indigo-600 font-bold truncate">{lesson.topic_title}</span>
+            <span className="text-primary font-bold truncate">{lesson.topic_title}</span>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -294,9 +294,9 @@ export function LessonView({
             </h1>
             <button
               onClick={() => setShowSourceModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-2xs flex-shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:text-primary hover:border-primary/20 transition-all shadow-2xs flex-shrink-0"
             >
-              <FileText className="w-3.5 h-3.5 text-indigo-500" />
+              <FileText className="w-3.5 h-3.5 text-primary" />
               <span>Source PDF</span>
             </button>
           </div>
@@ -338,7 +338,7 @@ export function LessonView({
                     <div className="pt-6 pb-2">
                       <div className="w-full border-t border-slate-200/80 mb-6" />
                       <div className="flex items-center gap-3">
-                        <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 font-mono shadow-2xs">
+                        <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-mono shadow-2xs">
                           {numStr}
                         </span>
                         <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
@@ -355,7 +355,7 @@ export function LessonView({
                     <div className="pt-6 pb-2">
                       <div className="w-full border-t border-slate-200/80 mb-6" />
                       <div className="flex items-center gap-3">
-                        <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 font-mono shadow-2xs">
+                        <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-mono shadow-2xs">
                           {numStr}
                         </span>
                         <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
@@ -366,7 +366,7 @@ export function LessonView({
                   );
                 },
                 h3: ({ children }) => (
-                  <h4 className="text-base sm:text-lg font-bold text-indigo-700 mt-6 mb-2">
+                  <h4 className="text-base sm:text-lg font-bold text-primary mt-6 mb-2">
                     {children}
                   </h4>
                 ),
@@ -380,7 +380,7 @@ export function LessonView({
                     const arrowParts = text.split(/(?:→|->|─►|─>|➔)/).map((s) => s.trim()).filter(Boolean);
                     if (arrowParts.length >= 2) {
                       return (
-                        <div className="my-6 p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 via-purple-50/80 to-amber-50/80 border border-slate-200/90 flex flex-wrap items-center justify-center gap-3 shadow-2xs">
+                        <div className="my-6 p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 via-primary/80 to-amber-50/80 border border-slate-200/90 flex flex-wrap items-center justify-center gap-3 shadow-2xs">
                           {arrowParts.map((part, idx) => {
                             const colors = getConceptColorClass(part);
                             return (
@@ -404,9 +404,9 @@ export function LessonView({
                   if (text.startsWith("Definition:") || text.startsWith("💡") || text.startsWith("🟦 DEFINITION")) {
                     const cleanText = text.replace(/^(Definition:|💡 DEFINITION|🟦 DEFINITION|💡|🟦):\s*/i, "");
                     return (
-                      <div className="my-6 rounded-2xl bg-indigo-50/80 border-l-4 border-indigo-600 p-5 space-y-1 shadow-2xs">
-                        <div className="flex items-center gap-2 text-indigo-700 font-bold text-xs uppercase tracking-wider">
-                          <Lightbulb className="w-4 h-4 text-indigo-600" />
+                      <div className="my-6 rounded-2xl bg-primary/80 border-l-4 border-primary p-5 space-y-1 shadow-2xs">
+                        <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
+                          <Lightbulb className="w-4 h-4 text-primary" />
                           💡 DEFINITION
                         </div>
                         <p className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
@@ -468,9 +468,9 @@ export function LessonView({
                   if (text.startsWith("Why this works") || text.startsWith("🔬")) {
                     const cleanText = text.replace(/^(Why this works:|🔬 WHY THIS WORKS|🔬):\s*/i, "");
                     return (
-                      <div className="my-6 rounded-2xl bg-purple-50/90 border-l-4 border-purple-500 p-5 space-y-1 shadow-2xs">
-                        <div className="flex items-center gap-2 text-purple-900 font-bold text-xs uppercase tracking-wider">
-                          <Brain className="w-4 h-4 text-purple-600" />
+                      <div className="my-6 rounded-2xl bg-primary/90 border-l-4 border-primary p-5 space-y-1 shadow-2xs">
+                        <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
+                          <Brain className="w-4 h-4 text-primary" />
                           🔬 WHY DO THESE EQUATIONS WORK?
                         </div>
                         <p className="text-sm sm:text-base text-slate-900 leading-relaxed font-medium">
@@ -521,7 +521,7 @@ export function LessonView({
                 code: ({ inline, children }: any) => {
                   if (inline) {
                     return (
-                      <code className="bg-slate-100 text-indigo-700 font-mono text-xs px-1.5 py-0.5 rounded border border-slate-200 font-bold">
+                      <code className="bg-slate-100 text-primary font-mono text-xs px-1.5 py-0.5 rounded border border-slate-200 font-bold">
                         {children}
                       </code>
                     );
@@ -529,15 +529,15 @@ export function LessonView({
                   return (
                     <div className="my-7 rounded-2xl bg-slate-900 text-slate-100 p-6 font-mono text-sm sm:text-base overflow-x-auto shadow-md border border-slate-800 space-y-3">
                       <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                        <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
-                          <Zap className="w-4 h-4 text-indigo-400" />
+                        <div className="flex items-center gap-2 text-primary/70 font-bold text-xs uppercase tracking-wider">
+                          <Zap className="w-4 h-4 text-primary/70" />
                           <span>🟪 Kinematic Equations & Formula Block</span>
                         </div>
-                        <span className="text-[10px] bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800 font-sans font-semibold">
+                        <span className="text-[10px] bg-primary text-primary/40 px-2 py-0.5 rounded border border-primary font-sans font-semibold">
                           Mathematical Formulation
                         </span>
                       </div>
-                      <div className="text-indigo-200 font-bold text-base sm:text-lg pt-1 leading-relaxed">
+                      <div className="text-primary/20 font-bold text-base sm:text-lg pt-1 leading-relaxed">
                         {children}
                       </div>
                     </div>
@@ -549,7 +549,7 @@ export function LessonView({
                   <div className="my-7 overflow-x-auto rounded-2xl border border-slate-200/90 bg-white p-5 shadow-2xs space-y-2">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                       <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Symbol Legend & Notation Breakdown</p>
-                      <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">Units & Meaning</span>
+                      <span className="text-[11px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-md">Units & Meaning</span>
                     </div>
                     <table className="w-full text-left text-xs sm:text-sm border-collapse">
                       {children}
@@ -566,8 +566,8 @@ export function LessonView({
                   // Highlight Units in badges
                   if (/^(m\/s|m\/s²|s|N|kg|m)$/i.test(text.trim())) {
                     return (
-                      <td className="p-3 border-b border-slate-100 text-indigo-700 font-mono font-bold text-xs">
-                        <span className="bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                      <td className="p-3 border-b border-slate-100 text-primary font-mono font-bold text-xs">
+                        <span className="bg-primary/5 px-2 py-0.5 rounded border border-primary/20">
                           {children}
                         </span>
                       </td>
@@ -590,7 +590,7 @@ export function LessonView({
             <div className="my-7 space-y-2">
               <button
                 onClick={() => setZoomedImage(validImages[0])}
-                className="w-full rounded-2xl overflow-hidden border border-slate-200 shadow-xs hover:border-indigo-400 transition-all bg-white group relative block"
+                className="w-full rounded-2xl overflow-hidden border border-slate-200 shadow-xs hover:border-primary/70 transition-all bg-white group relative block"
               >
                 <div className="aspect-video w-full bg-slate-100 flex items-center justify-center overflow-hidden">
                   <img
@@ -604,10 +604,10 @@ export function LessonView({
                 </div>
                 <div className="p-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
                   <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                    <BookOpen className="w-3.5 h-3.5 text-primary" />
                     Figure 1.1: Concept Visual Diagram
                   </span>
-                  <span className="text-indigo-600 font-bold flex items-center gap-1 group-hover:underline">
+                  <span className="text-primary font-bold flex items-center gap-1 group-hover:underline">
                     <ZoomIn className="w-3.5 h-3.5" /> Tap to zoom
                   </span>
                 </div>
@@ -650,7 +650,7 @@ export function LessonView({
             <div className="my-7 space-y-2">
               <button
                 onClick={() => setZoomedImage(validImages[1])}
-                className="w-full rounded-2xl overflow-hidden border border-slate-200 shadow-xs hover:border-indigo-400 transition-all bg-white group relative block"
+                className="w-full rounded-2xl overflow-hidden border border-slate-200 shadow-xs hover:border-primary/70 transition-all bg-white group relative block"
               >
                 <div className="aspect-video w-full bg-slate-100 flex items-center justify-center overflow-hidden">
                   <img
@@ -664,10 +664,10 @@ export function LessonView({
                 </div>
                 <div className="p-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
                   <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                    <BookOpen className="w-3.5 h-3.5 text-primary" />
                     Figure 1.2: Graphical Analysis & Curves
                   </span>
-                  <span className="text-indigo-600 font-bold flex items-center gap-1 group-hover:underline">
+                  <span className="text-primary font-bold flex items-center gap-1 group-hover:underline">
                     <ZoomIn className="w-3.5 h-3.5" /> Tap to zoom
                   </span>
                 </div>
@@ -678,8 +678,8 @@ export function LessonView({
           {/* Key Takeaways Summary Block */}
           <div className="my-8 rounded-2xl bg-slate-900 text-white p-6 sm:p-7 space-y-4 shadow-md border border-slate-800">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
-                <Brain className="w-4.5 h-4.5 text-indigo-400" />
+              <div className="flex items-center gap-2 text-primary/70 font-bold text-xs uppercase tracking-wider">
+                <Brain className="w-4.5 h-4.5 text-primary/70" />
                 <span>📌 KEY TAKEAWAYS</span>
               </div>
               <span className="text-[11px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">
@@ -734,12 +734,12 @@ export function LessonView({
                     disabled={isSubmitting}
                     className={`w-full flex items-center gap-3.5 p-4 rounded-xl border text-left text-sm font-medium transition-all ${
                       isSelected
-                        ? "bg-indigo-50 border-indigo-600 text-indigo-900 ring-2 ring-indigo-600/20 shadow-2xs"
-                        : "bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-slate-50/80"
+                        ? "bg-primary/5 border-primary text-primary ring-2 ring-primary/20 shadow-2xs"
+                        : "bg-white border-slate-200 text-slate-700 hover:border-primary/40 hover:bg-slate-50/80"
                     }`}
                   >
                     <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-colors ${
-                      isSelected ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"
+                      isSelected ? "bg-primary text-white" : "bg-slate-100 text-slate-600"
                     }`}>
                       {opt.key}
                     </span>
@@ -757,14 +757,14 @@ export function LessonView({
                   disabled={isSubmitting}
                   rows={2}
                   placeholder="Type your explanation..."
-                  className="w-full border border-slate-200 rounded-xl p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
+                  className="w-full border border-slate-200 rounded-xl p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-slate-50/50"
                 />
                 {answer.trim() && !selectedOptionKey && (
                   <div className="mt-3 flex justify-end">
                     <button
                       onClick={handleSubmitText}
                       disabled={isSubmitting}
-                      className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-indigo-700 transition-colors shadow-xs"
+                      className="px-6 py-2.5 bg-primary text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors shadow-xs"
                     >
                       Submit Explanation
                     </button>
@@ -800,7 +800,7 @@ export function LessonView({
               <div className="flex justify-end pt-1">
                 <button
                   onClick={handleContinue}
-                  className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-xs hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                  className="px-6 py-3 bg-primary text-white rounded-xl text-sm font-bold shadow-xs hover:bg-primary/90 transition-colors flex items-center gap-2"
                 >
                   <span>{feedback.done ? "Finish Topic" : "Continue to Next Concept"}</span>
                   <ArrowRight className="w-4 h-4" />
@@ -842,7 +842,7 @@ export function LessonView({
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-indigo-600" />
+                <FileText className="w-4 h-4 text-primary" />
                 <span className="font-bold text-slate-900 text-sm">Source Document</span>
               </div>
               <button 

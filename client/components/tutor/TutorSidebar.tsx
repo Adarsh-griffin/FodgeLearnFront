@@ -53,7 +53,7 @@ export function TutorSidebar({
           onClick={() => navigate("/")} 
           className="flex items-center gap-2 text-left hover:opacity-90 transition-opacity"
         >
-          <img src="/navbarlogo.png" alt="Learnfodge" className="h-7 w-auto object-contain" />
+          <img src="/navbarlogo.png" alt="LearnForge" className="h-7 w-auto object-contain" />
         </button>
       </div>
 
@@ -68,11 +68,11 @@ export function TutorSidebar({
               onClick={item.action}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 isActive
-                  ? "bg-indigo-50/80 text-indigo-600 font-semibold shadow-xs"
+                  ? "bg-primary/80 text-primary font-semibold shadow-xs"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? "text-indigo-600" : "text-slate-400"}`} />
+              <Icon className={`w-4 h-4 ${isActive ? "text-primary" : "text-slate-400"}`} />
               <span>{item.label}</span>
             </button>
           );
@@ -101,7 +101,7 @@ export function TutorSidebar({
           {onChangeDocument && (
             <button
               onClick={onChangeDocument}
-              className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 hover:underline text-left pt-1"
+              className="text-[11px] font-medium text-primary hover:text-primary/80 hover:underline text-left pt-1"
             >
               Change document
             </button>
@@ -124,7 +124,7 @@ export function TutorSidebar({
                   key={step.topic_id}
                   className={`group w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs transition-all ${
                     isCurrent
-                      ? "bg-indigo-50/90 text-indigo-700 font-semibold border border-indigo-100/80 shadow-2xs"
+                      ? "bg-primary/90 text-primary font-semibold border border-primary/80 shadow-2xs"
                       : isDone
                       ? "text-slate-700 hover:bg-slate-50"
                       : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
@@ -133,8 +133,8 @@ export function TutorSidebar({
                   {isDone ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                   ) : isCurrent ? (
-                    <span className="w-4 h-4 rounded-full border-2 border-indigo-600 flex-shrink-0 flex items-center justify-center bg-white">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                    <span className="w-4 h-4 rounded-full border-2 border-primary flex-shrink-0 flex items-center justify-center bg-white">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                     </span>
                   ) : (
                     <Circle className="w-4 h-4 text-slate-300 flex-shrink-0" />

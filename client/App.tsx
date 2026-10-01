@@ -6,6 +6,8 @@ import { ClerkProvider } from "@clerk/react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { AuthGateModal } from "@/components/AuthGateModal";
+import { AuthGateProvider, useAuthGate } from "@/lib/AuthGateContext";
 import { Home } from "./pages/Home";
 import { StudyPage } from "./pages/Study";
 import NotFound from "./pages/NotFound";
@@ -38,27 +40,36 @@ function ClerkProviderWithRoutes({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** The single shared auth-gate modal instance for the homepage - both
+ * Navigation's "Start Now" and Home's "Get Started" open THIS one via
+ * useAuthGate(), instead of each rendering (and independently opening)
+ * their own copy. */
+function HomeRoute() {
+  const { isOpen, closeAuthGate } = useAuthGate();
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Navigation />
+      <main className="flex-1">
+        <Home />
+      </main>
+      <Footer />
+      <AuthGateModal isOpen={isOpen} onClose={closeAuthGate} />
+    </div>
+  );
+}
+
 const App = () => {
   return (
     <ErrorBoundary>
       <BrowserRouter>
         <ClerkProviderWithRoutes>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <div className="flex flex-col min-h-screen">
-                  <Navigation />
-                  <main className="flex-1">
-                    <Home />
-                  </main>
-                  <Footer />
-                </div>
-              }
-            />
-            <Route path="/study" element={<StudyPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AuthGateProvider>
+            <Routes>
+              <Route path="/" element={<HomeRoute />} />
+              <Route path="/study" element={<StudyPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthGateProvider>
         </ClerkProviderWithRoutes>
       </BrowserRouter>
     </ErrorBoundary>

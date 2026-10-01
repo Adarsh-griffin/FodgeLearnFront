@@ -94,14 +94,14 @@ export function MobileUploadView({
           onDrop={handleDrop}
           className={`border-2 border-dashed rounded-2xl p-7 sm:p-9 text-center transition-all ${
             isDragging
-              ? "border-indigo-600 bg-indigo-50/70 ring-4 ring-indigo-500/20"
-              : "border-indigo-200 bg-indigo-50/25 hover:border-indigo-400 hover:bg-indigo-50/40"
+              ? "border-primary bg-primary/70 ring-4 ring-primary/20"
+              : "border-primary/20 bg-primary/25 hover:border-primary/70 hover:bg-primary/40"
           }`}
         >
           {/* Prominent Upload Icon */}
           <div className="mb-4 flex justify-center">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-100/70 text-indigo-600 flex items-center justify-center shadow-xs">
-              <Upload className={`w-9 h-9 ${isDragging ? "text-indigo-700 scale-110" : "text-indigo-600"}`} />
+            <div className="w-16 h-16 rounded-2xl bg-primary/70 text-primary flex items-center justify-center shadow-xs">
+              <Upload className={`w-9 h-9 ${isDragging ? "text-primary scale-110" : "text-primary"}`} />
             </div>
           </div>
 
@@ -124,7 +124,7 @@ export function MobileUploadView({
 
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="w-[165px] h-[48px] mx-auto rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm uppercase tracking-wider shadow-md flex items-center justify-center transition-all active:scale-95"
+            className="w-[165px] h-[48px] mx-auto rounded-xl bg-primary hover:bg-primary/90 text-white font-extrabold text-sm uppercase tracking-wider shadow-md flex items-center justify-center transition-all active:scale-95"
           >
             SELECT FILES
           </button>
@@ -160,7 +160,7 @@ export function MobileUploadView({
                 value={topicInput}
                 onChange={(e) => setTopicInput(e.target.value)}
                 placeholder="📖 e.g. Quantum Computing, Photosynthesis"
-                className="w-full border border-slate-200 rounded-xl px-4 py-3.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 bg-slate-50/60 font-medium"
+                className="w-full border border-slate-200 rounded-xl px-4 py-3.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-slate-50/60 font-medium"
               />
             </div>
 
@@ -170,7 +170,7 @@ export function MobileUploadView({
               disabled={isTopicButtonDisabled}
               className={`w-full py-3.5 px-5 rounded-xl text-sm font-extrabold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
                 isTopicButtonDisabled
-                  ? "bg-indigo-100/90 text-slate-400 cursor-not-allowed opacity-60"
+                  ? "bg-primary/90 text-slate-400 cursor-not-allowed opacity-60"
                   : "bg-primary hover:bg-primary/90 text-white cursor-pointer active:scale-98"
               }`}
             >
@@ -185,19 +185,19 @@ export function MobileUploadView({
           <h5 className="text-sm font-bold text-slate-900">Supported Formats</h5>
           <div className="space-y-2 pt-0.5">
             <div className="flex items-center gap-2.5 text-sm font-medium text-slate-700">
-              <Check className="w-4 h-4 text-indigo-600 flex-shrink-0 stroke-[2.5]" />
+              <Check className="w-4 h-4 text-primary flex-shrink-0 stroke-[2.5]" />
               <span>PDF files</span>
             </div>
             <div className="flex items-center gap-2.5 text-sm font-medium text-slate-700">
-              <Check className="w-4 h-4 text-indigo-600 flex-shrink-0 stroke-[2.5]" />
+              <Check className="w-4 h-4 text-primary flex-shrink-0 stroke-[2.5]" />
               <span>Max 50MB per file</span>
             </div>
             <div className="flex items-center gap-2.5 text-sm font-medium text-slate-700">
-              <Check className="w-4 h-4 text-indigo-600 flex-shrink-0 stroke-[2.5]" />
+              <Check className="w-4 h-4 text-primary flex-shrink-0 stroke-[2.5]" />
               <span>Multiple files allowed</span>
             </div>
             <div className="flex items-center gap-2.5 text-sm font-medium text-slate-700">
-              <Check className="w-4 h-4 text-indigo-600 flex-shrink-0 stroke-[2.5]" />
+              <Check className="w-4 h-4 text-primary flex-shrink-0 stroke-[2.5]" />
               <span>TXT, DOCX, EPUB</span>
             </div>
           </div>
@@ -229,7 +229,7 @@ export function MobileUploadView({
                           {showSuccess ? (
                             <CheckCircle className="w-4.5 h-4.5 text-emerald-600 flex-shrink-0" />
                           ) : (
-                            <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />
                           )}
                           <span className="font-semibold text-slate-800 truncate">{file.name}</span>
                         </div>

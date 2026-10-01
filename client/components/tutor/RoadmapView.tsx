@@ -100,7 +100,7 @@ export function RoadmapView({ plan, onStart }: { plan: StudyPlan; onStart: () =>
         <div className="mt-8 mb-6 flex justify-center">
           <button
             onClick={onStart}
-            className="w-full sm:w-auto px-8 py-4 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-md hover:bg-indigo-700 active:scale-[0.98] transition-all"
+            className="w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary/90 active:scale-[0.98] transition-all"
           >
             Start Learning
           </button>

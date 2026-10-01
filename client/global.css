@@ -13,39 +13,41 @@
    * A different format will require also updating the theme in tailwind.config.ts.
   */
   :root {
-    /* LearnFordge official brand palette, converted from the supplied hex
-       swatches to HSL:
-         #0B1B3D navy   -> 221 69% 14%
-         #4B6BFF blue   -> 229 100% 65%  (primary)
-         #8A5CFF purple -> 257 100% 68%  (accent)
-         #FF8A5B orange -> 17 100% 68%   (--gold, kept under its old var
-                                           name so existing bg-gold/text-gold
-                                           usages just pick up the real
-                                           brand color)
-         #FFECC7 cream  -> 40 100% 89%
+    /* LearnForge brand palette v2 - replaced the blue/violet primary
+       (229 100% 65% / 257 100% 68%, i.e. #4B6BFF/#8A5CFF) with a deep
+       emerald + the existing warm gold accent. Blue/purple-on-gradient is
+       the single most common "this looks AI-generated" tell in SaaS UI
+       right now; emerald+gold is a pairing real premium products (fintech,
+       productivity, editorial) reach for instead, and it's still built
+       from this app's own palette (the gold swatch was already here) -
+       not an unrelated color scheme bolted on.
+         #064E3B-ish emerald -> 158 64% 24%  (primary)
+         #FF8A5B orange      -> 17 100% 68%  (accent/--gold, unchanged)
+         #0B2420 deep forest -> 160 45% 10%  (navy slot - was navy-blue)
+         #FFECC7 cream       -> 40 100% 89%  (unchanged)
        Cream is nearly white - reserved for surfaces that carry DARK text
        (badges, soft highlight backgrounds), never as a background behind
        white text or as a text-gradient endpoint, where it would vanish. */
     --background: 0 0% 100%;
-    --foreground: 222 35% 14%;
+    --foreground: 160 20% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 35% 14%;
+    --card-foreground: 160 20% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 35% 14%;
+    --popover-foreground: 160 20% 12%;
 
-    --primary: 229 100% 65%;
+    --primary: 158 64% 24%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 229 60% 96%;
-    --secondary-foreground: 229 45% 24%;
+    --secondary: 150 20% 96%;
+    --secondary-foreground: 158 35% 20%;
 
-    --muted: 229 20% 96%;
-    --muted-foreground: 222 12% 46%;
+    --muted: 150 12% 95%;
+    --muted-foreground: 160 8% 44%;
 
-    --accent: 257 100% 68%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 17 100% 68%;
+    --accent-foreground: 20 60% 15%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
@@ -54,7 +56,10 @@
        "quota warning" surface reached for a raw Tailwind green/amber
        class or a hardcoded hex (see the old .correct-box/.incorrect-box
        rules below), untethered from the brand palette. These are the one
-       source of truth for success/warning/info everywhere. */
+       source of truth for success/warning/info everywhere. success is
+       intentionally a different, more saturated green than --primary so
+       "this is the brand color" and "this answer was correct" stay
+       visually distinct even though both are green-family. */
     --success: 142 71% 42%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
@@ -62,17 +67,17 @@
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
-    --border: 229 20% 90%;
-    --input: 229 20% 95%;
-    --ring: 229 100% 65%;
+    --border: 150 15% 89%;
+    --input: 150 15% 94%;
+    --ring: 158 64% 24%;
 
     --radius: 0.875rem;
 
-    --sidebar-background: 221 69% 14%;
+    --sidebar-background: 160 45% 10%;
 
-    --sidebar-foreground: 229 30% 92%;
+    --sidebar-foreground: 150 20% 92%;
 
-    --sidebar-primary: 229 100% 65%;
+    --sidebar-primary: 158 64% 24%;
 
     --sidebar-primary-foreground: 0 0% 100%;
 
@@ -80,22 +85,25 @@
 
     --sidebar-accent-foreground: 20 60% 15%;
 
-    --sidebar-border: 221 45% 24%;
+    --sidebar-border: 160 30% 22%;
 
-    --sidebar-ring: 229 100% 65%;
+    --sidebar-ring: 158 64% 24%;
 
     /* Brand orange - premium highlights (badges, remediation banners) */
     --gold: 17 100% 68%;
     --gold-foreground: 20 60% 15%;
 
-    /* Brand navy and cream, for surfaces that want the exact swatch rather
-       than a semantic slot above (a dark hero panel, a light warm badge). */
-    --navy: 221 69% 14%;
-    --navy-foreground: 229 30% 92%;
+    /* Brand dark-neutral and cream, for surfaces that want the exact swatch
+       rather than a semantic slot above (a dark hero panel, a light warm
+       badge). "navy" now names a deep forest-charcoal, not a blue - kept
+       the variable name so every existing bg-navy/text-navy usage just
+       picks up the new color with no call-site changes. */
+    --navy: 160 45% 10%;
+    --navy-foreground: 150 20% 92%;
     --cream: 40 100% 89%;
     --cream-foreground: 25 50% 20%;
 
-    --button-lavender: 229 100% 65%;
+    --button-lavender: 158 64% 24%;
   }
 
   .dark {
@@ -781,32 +789,30 @@
     0 2px 8px -2px rgba(67, 56, 202, 0.08);
 }
 
-/* Blue -> purple: the 2-stop slice used for buttons, badges and text
-   gradients, where the surface needs to stay legible/contrasty end to end.
-   background-image (not the `background` shorthand) is required here:
-   the shorthand resets background-clip to its initial value, which
-   silently cancelled Tailwind's bg-clip-text on the hero headline (the
-   gradient rendered as an opaque block instead of clipping to the text)
+/* Emerald -> gold: this is now used in exactly one place by design (the
+   homepage hero's gradient headline + its CTA button) - every other
+   button/badge in the app uses the flat --primary color instead (see
+   components/ui/Button.tsx). background-image (not the `background`
+   shorthand) is required here: the shorthand resets background-clip to
+   its initial value, which silently cancels Tailwind's bg-clip-text
    because this rule comes after .bg-clip-text in the compiled stylesheet
    and they tie on specificity. */
 .gradient-brand {
-  background-image: linear-gradient(135deg, hsl(229 100% 65%), hsl(257 100% 68%));
+  background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--gold)));
 }
 
 .gradient-gold {
   background-image: linear-gradient(135deg, hsl(17 100% 68%), hsl(32 95% 60%));
 }
 
-/* The full brand spectrum (navy -> blue -> purple -> orange), for large
-   section backgrounds only - stops before the pale cream swatch on
-   purpose, since white text over #FFECC7 has no contrast. */
+/* The full brand spectrum (deep forest -> emerald -> gold), for large
+   section backgrounds only. */
 .gradient-spectrum {
   background-image: linear-gradient(
     120deg,
-    hsl(221 69% 14%) 0%,
-    hsl(229 100% 65%) 35%,
-    hsl(257 100% 68%) 65%,
-    hsl(17 100% 68%) 100%
+    hsl(var(--navy)) 0%,
+    hsl(var(--primary)) 45%,
+    hsl(var(--gold)) 100%
   );
 }
 
