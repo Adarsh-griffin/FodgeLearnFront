@@ -274,13 +274,16 @@ class ApiService {
     return `${normalizedBase}${normalizedPath}`;
   }
 
-  // Upload file
-  async uploadFile(file: File): Promise<UploadResponse> {
+  // Upload file. `authHeaders` ties the upload to whoever's uploading it
+  // (Clerk user or anonymous guest id, from getTutorAuthHeaders) so it only
+  // ever shows up in THEIR file list - see getFiles().
+  async uploadFile(file: File, authHeaders: Record<string, string> = {}): Promise<UploadResponse> {
     const formData = new FormData();
     formData.append('pdf', file);
 
     const response = await fetch(`${this.baseURL}/api/upload`, {
       method: 'POST',
+      headers: authHeaders,
       body: formData,
     });
 
@@ -292,9 +295,11 @@ class ApiService {
     return response.json();
   }
 
-  // Get uploaded files
-  async getFiles(): Promise<FileInfo[]> {
-    const response = await fetch(`${this.baseURL}/api/files`);
+  // Get uploaded files, scoped to whoever `authHeaders` identifies - the
+  // backend returns an empty list for no/unrecognized identity rather than
+  // every user's files (see /api/files in test_groq.py).
+  async getFiles(authHeaders: Record<string, string> = {}): Promise<FileInfo[]> {
+    const response = await fetch(`${this.baseURL}/api/files`, { headers: authHeaders });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

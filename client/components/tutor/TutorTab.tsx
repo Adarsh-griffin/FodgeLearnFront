@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth, SignInButton } from "@clerk/react";
 import { FileText, GraduationCap, CheckCircle2, Menu, Search, Bell, Plus } from "lucide-react";
 import { apiService, FileInfo, StudyPlan, DiagnosticResult, LessonStep } from "@/lib/api";
@@ -88,25 +88,51 @@ export function TutorTab({ handleTabChange, navigate, pendingFileId, onConsumePe
     }
   };
 
+  // pendingFileId read through a ref, not a dependency - see the effect
+  // below for why.
+  const pendingFileIdRef = useRef(pendingFileId);
+  useEffect(() => {
+    pendingFileIdRef.current = pendingFileId;
+  }, [pendingFileId]);
+
   // Resumes "which document was I last studying" from MongoDB
   // (student_profiles.updated_at, via /api/tutor/latest-file) instead of a
   // locally-cached file id/name - the backend already knows this (every
   // interaction touches updated_at), so there's nothing to duplicate
   // client-side.
+  //
+  // Deliberately depends on [isLoaded] only, NOT pendingFileId: this used
+  // to also re-run whenever pendingFileId changed, but onConsumePendingFileId()
+  // below sets it to null right after use - which, with pendingFileId in
+  // the dependency array, immediately re-ran this whole effect a second
+  // time. That second run's own fileId was still null (no NEW pending file
+  // yet), so it fell through to the "no file to resume" branch and called
+  // setStage("select_file") - clobbering whatever the FIRST run's
+  // resumeProgress() call was about to set once its (still in-flight)
+  // network request resolved. Confirmed live: right after uploading and
+  // landing on the AI Tutor tab, this race could leave the student stuck
+  // on "Which document do you want to learn?" (or a blank screen, if
+  // resumeProgress won the race but then got silently overwritten) even
+  // though their file was already selected and processing. Reading
+  // pendingFileId from a ref means consuming it no longer re-triggers this
+  // effect at all - exactly the "Called once... doesn't re-trigger" intent
+  // the prop was already documented with.
   useEffect(() => {
     if (!isLoaded) return;
     let cancelled = false;
     (async () => {
       try {
-        const list = await apiService.getFiles();
+        const headers = await getAuthHeaders();
+        const list = await apiService.getFiles(headers);
         if (cancelled) return;
         setFiles(list);
 
         // A just-uploaded document (see Study.tsx) takes priority over
         // whatever was last studied, so typing a fresh topic name doesn't
         // land the student back in an unrelated previous session.
-        if (pendingFileId && list.some((f) => f._id === pendingFileId)) {
-          const file = list.find((f) => f._id === pendingFileId)!;
+        const currentPendingFileId = pendingFileIdRef.current;
+        if (currentPendingFileId && list.some((f) => f._id === currentPendingFileId)) {
+          const file = list.find((f) => f._id === currentPendingFileId)!;
           setSelectedFileId(file._id);
           setSelectedFileName(file.originalName);
           resumeProgress(file._id);
@@ -114,7 +140,6 @@ export function TutorTab({ handleTabChange, navigate, pendingFileId, onConsumePe
           return;
         }
 
-        const headers = await getAuthHeaders();
         const latest = await apiService.getLatestTutorFile(headers);
         const stillExists = latest.fileId && list.some((f) => f._id === latest.fileId);
         if (cancelled) return;
@@ -136,7 +161,7 @@ export function TutorTab({ handleTabChange, navigate, pendingFileId, onConsumePe
     return () => {
       cancelled = true;
     };
-  }, [isLoaded, pendingFileId]);
+  }, [isLoaded]);
 
   const handleSelectFile = (file: FileInfo) => {
     setSelectedFileId(file._id);
@@ -307,6 +332,25 @@ export function TutorTab({ handleTabChange, navigate, pendingFileId, onConsumePe
           )}
 
           {stage === "roadmap" && plan && <RoadmapView plan={plan} onStart={handleStartLearning} />}
+
+          {/* generatePlan() failed: stage is "roadmap" but plan never got
+              set. Previously this rendered nothing at all - planError was
+              captured but never displayed, so any backend failure here (a
+              Groq error, a timeout, ...) looked like a totally blank, dead
+              screen with no way to recover short of reloading. */}
+          {stage === "roadmap" && !plan && (
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
+              <p className="text-destructive font-medium">
+                {planError || "Failed to generate your study plan."}
+              </p>
+              <button
+                onClick={() => generatePlan(goal, availableMinutes)}
+                className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all"
+              >
+                Try again
+              </button>
+            </div>
+          )}
 
           {stage === "lesson" && plan && (
             <div className="flex-1 flex min-h-0 overflow-hidden w-full">

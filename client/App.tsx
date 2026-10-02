@@ -12,6 +12,8 @@ import { AuthGateProvider, useAuthGate } from "@/lib/AuthGateContext";
 import { ToastProvider } from "@/lib/ToastContext";
 import { AILearningLoader } from "@/components/ui/AILearningLoader";
 import { Home } from "./pages/Home";
+import { PrivacyPolicy } from "./pages/PrivacyPolicy";
+import { Terms } from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 
 // Lazy-loaded: /study (and everything it imports - KaTeX, react-markdown,
@@ -77,6 +79,10 @@ const App = () => {
             <AuthGateProvider>
               <Routes>
                 <Route path="/" element={<HomeRoute />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/terms-and-conditions" element={<Terms />} />
                 <Route
                   path="/study"
                   element={

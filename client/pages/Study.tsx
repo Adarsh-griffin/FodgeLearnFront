@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { useAuth } from "@clerk/react";
+import { getTutorAuthHeaders } from "@/lib/identity";
 import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap, HelpCircle, BarChart3, ArrowRight, Lightbulb, Library, UploadCloud, Presentation, FileType, Search, Send, Mic, Square } from "lucide-react";
 import { TutorTab } from "@/components/tutor/TutorTab";
 import { TutorSidebar } from "@/components/tutor/TutorSidebar";
@@ -30,6 +32,7 @@ const ASSESSMENT_SESSION_LENGTH = 5;
 
 
 const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "upload" | "learning" | "assessment" | "tutor") => void, navigate: (path: string | number) => void }) => {
+  const { isSignedIn, getToken } = useAuth();
   const [currentState, setCurrentState] = useState<AssessmentState>('welcome');
   const [question, setQuestion] = useState<string>('');
   const [userAnswer, setUserAnswer] = useState<string>('');
@@ -69,7 +72,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
 
   useEffect(() => {
     let cancelled = false;
-    apiService.getFiles().then((files) => {
+    getTutorAuthHeaders(!!isSignedIn, getToken).then((headers) => apiService.getFiles(headers)).then((files) => {
       if (cancelled) return;
       setAvailableFiles(files);
       if (files.length > 0) setSelectedFileName((prev) => prev ?? files[0].originalName);
@@ -78,7 +81,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
       // just fall back to the backend's own most-recent-upload default.
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [isSignedIn, getToken]);
 
   // Parse MCQ text
   const parseMCQ = (text: string) => {
@@ -1177,6 +1180,14 @@ function UploadTab({
 export function StudyPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { isSignedIn, getToken } = useAuth();
+  // Identifies whoever is uploading/listing files (Clerk user or anonymous
+  // guest id) so one student's documents are never shown to another - see
+  // /api/upload and /api/files in test_groq.py.
+  const getAuthHeaders = useCallback(
+    () => getTutorAuthHeaders(!!isSignedIn, getToken),
+    [isSignedIn, getToken],
+  );
   const [activeTab, setActiveTab] = useState<"upload" | "learning" | "assessment" | "tutor">("upload");
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -1370,8 +1381,10 @@ startxref
             });
           }, 200);
 
-          // Upload to backend
-          const response: UploadResponse = await apiService.uploadFile(file);
+          // Upload to backend, tagged with whoever's uploading it so it only
+          // ever shows up in their own file list.
+          const uploadHeaders = await getAuthHeaders();
+          const response: UploadResponse = await apiService.uploadFile(file, uploadHeaders);
 
           // Complete progress
           setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
@@ -1605,7 +1618,8 @@ startxref
           // /api/files returns {_id, originalName, uploadDate, size, folder}[]
           // (so the AI Tutor tab has a stable fileId to key off) - reduce to
           // filenames here since that's all this dropdown has ever used.
-          const fileObjects = await apiService.getFiles();
+          const headers = await getAuthHeaders();
+          const fileObjects = await apiService.getFiles(headers);
           const fileList = fileObjects.map((f) => f.originalName).filter(Boolean);
           setAvailableFiles(fileList);
           // Set the first file (most recent) as default
@@ -2259,7 +2273,8 @@ startxref
                         onClick={async () => {
                           setFilesLoading(true);
                           try {
-                            const fileObjects = await apiService.getFiles();
+                            const headers = await getAuthHeaders();
+                            const fileObjects = await apiService.getFiles(headers);
                             const fileList = fileObjects.map((f) => f.originalName).filter(Boolean);
                             setAvailableFiles(fileList);
                             if (fileList.length > 0 && !fileList.includes(selectedFile)) {
