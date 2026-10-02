@@ -37,8 +37,10 @@ if (!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY) {
  */
 function ClerkProviderWithRoutes({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
+  const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
   return (
     <ClerkProvider
+      publishableKey={publishableKey}
       routerPush={(to) => navigate(to)}
       routerReplace={(to) => navigate(to, { replace: true })}
     >
