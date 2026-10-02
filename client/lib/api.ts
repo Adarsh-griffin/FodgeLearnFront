@@ -47,7 +47,6 @@ export interface LearningTTSResult {
   audioUrl: string;
   audioId: string;
   s3Url?: string;
-  localPath?: string;
   videoUrl?: string | null;
   videoFilename?: string | null;
   videoError?: string;
@@ -461,7 +460,6 @@ class ApiService {
       audioUrl: absoluteAudioUrl,
       audioId: data.audioId,
       s3Url: data.s3_url,
-      localPath: data.local_path,
     };
 
     if (data.video) {
