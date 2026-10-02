@@ -178,12 +178,13 @@ export function LessonView({
     }
   }, [lesson]);
 
-  // Auto-scroll active highlighted paragraph into center view as speech progresses
+  // Auto-scroll active highlighted paragraph into view as speech progresses
   useEffect(() => {
     if (isPlaying && activeParagraphIndex >= 0 && paragraphRefs.current[activeParagraphIndex]) {
       paragraphRefs.current[activeParagraphIndex]?.scrollIntoView({
         behavior: "smooth",
-        block: "center",
+        block: "nearest",
+        inline: "nearest",
       });
     }
   }, [activeParagraphIndex, isPlaying]);

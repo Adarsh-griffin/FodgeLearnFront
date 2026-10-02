@@ -64,6 +64,7 @@ export function MobileTutorSheet({
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const liveSpeechPreview = useLiveSpeechPreview((text) => setInput(text));
 
@@ -82,7 +83,14 @@ export function MobileTutorSheet({
   };
 
   const scrollToEnd = () => {
-    requestAnimationFrame(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }));
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({
+          top: scrollContainerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    });
   };
 
   const sendQuestion = async (rawText: string) => {
@@ -210,7 +218,7 @@ export function MobileTutorSheet({
         </div>
 
         {/* Sheet Body (State 1: Cards or State 2: Messages) */}
-        <div className="flex-1 overflow-y-auto hide-scrollbar p-5 space-y-5 min-h-0">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto hide-scrollbar p-5 space-y-5 min-h-0">
           {messages.length === 0 ? (
             <div className="space-y-5">
               <p className="text-xs text-slate-500 font-medium leading-relaxed">

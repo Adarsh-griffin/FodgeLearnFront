@@ -61,6 +61,7 @@ export function TutorAssistantPanel({
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const liveSpeechPreview = useLiveSpeechPreview((text) => setInput(text));
 
@@ -84,7 +85,14 @@ export function TutorAssistantPanel({
   };
 
   const scrollToEnd = () => {
-    requestAnimationFrame(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }));
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({
+          top: scrollContainerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    });
   };
 
   const sendQuestion = async (rawText: string) => {
@@ -193,8 +201,10 @@ export function TutorAssistantPanel({
   })();
 
   return (
-    <aside className="hidden lg:flex w-80 lg:w-80 xl:w-[340px] flex-shrink-0 border-l border-slate-200/80 bg-white flex-col h-full min-h-0 overflow-y-auto hide-scrollbar select-none">
-      {/* Top Header */}
+    <aside className="hidden lg:flex w-80 lg:w-80 xl:w-[340px] flex-shrink-0 border-l border-slate-200/80 bg-white flex-col h-full min-w-0 min-h-0 overflow-hidden select-none">
+      {/* Top Header - stays fixed; only the body below scrolls (see the
+          overflow-y-auto wrapper right after it) so a long conversation
+          grows inside this panel instead of the whole page. */}
       <div className="p-3.5 px-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <GraduationCap className="w-4 h-4 text-primary" />
@@ -205,7 +215,20 @@ export function TutorAssistantPanel({
         </span>
       </div>
 
-      <div className="p-3.5 space-y-4 flex-1 flex flex-col">
+      {/* Plain block layout (not flex-col) for this scrollable body - its
+          children (hero card, search box, messages, mastery bars) are a
+          simple vertical stack with no flex-sizing needs of their own, and
+          `space-y-4` (margin-based) looks identical either way. Flex-col
+          children can fail to reflow a LATER sibling's position when an
+          EARLIER sibling's height changes after the initial layout pass
+          (confirmed: a tutor reply with KaTeX/markdown content can resize
+          asynchronously as math renders/fonts swap in, after the browser
+          already positioned "Your Understanding" below it) - this
+          surfaced as that card visually overlapping the reply text
+          instead of sitting cleanly below it. Plain block layout always
+          recomputes from actual rendered content, so it has no equivalent
+          failure mode. */}
+      <div ref={scrollContainerRef} className="p-3.5 space-y-4 flex-1 overflow-y-auto min-h-0 hide-scrollbar">
         {/* AI Tutor Hero Graphic Card with Full-Fitting Big Image */}
         <div className="rounded-2xl bg-gradient-to-b from-indigo-50/40 via-purple-50/20 to-slate-50 border border-slate-200/80 p-3.5 flex flex-col items-center text-center shadow-2xs space-y-2.5">
           <div className="w-full h-44 sm:h-48 overflow-hidden rounded-xl bg-amber-50/40 border border-amber-200/40 flex items-center justify-center p-1">

@@ -2523,7 +2523,7 @@ startxref
 
 
   return (
-    <div className={`h-screen w-screen bg-[#FAFAFC] flex flex-col overflow-hidden min-h-0 ${isResizing ? 'cursor-col-resize' : ''}`}>
+    <div className={`h-[100dvh] max-h-[100dvh] w-screen bg-[#FAFAFC] flex flex-col overflow-hidden min-h-0 ${isResizing ? 'cursor-col-resize' : ''}`}>
       {/* Top Header Bar (Desktop Only) */}
       <div className="hidden lg:flex items-center justify-between py-2.5 px-4 sm:px-6 bg-white border-b border-slate-200/80 flex-shrink-0 z-10 select-none">
         <div className="flex items-center gap-3">
