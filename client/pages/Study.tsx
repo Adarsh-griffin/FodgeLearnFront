@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap, HelpCircle, BarChart3, ArrowRight, Lightbulb, Library, UploadCloud, Presentation, FileType, Search, Send, Mic, Square } from "lucide-react";
 import { TutorTab } from "@/components/tutor/TutorTab";
@@ -10,6 +10,7 @@ import { MobileBottomNav } from "@/components/tutor/MobileBottomNav";
 import { MobileTutorSheet } from "@/components/tutor/MobileTutorSheet";
 import { apiService, UploadResponse, ReferenceLink, ProcessingStatus, AssessmentQuestion, AssessmentFeedback, FileInfo } from "@/lib/api";
 import { useToast } from "@/lib/ToastContext";
+import AvatarCanvas from "@/components/avatar/AvatarCanvas";
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
@@ -1497,11 +1498,13 @@ startxref
     const [brokenSummaryImages, setBrokenSummaryImages] = useState<Set<string>>(new Set());
     const [summaryStatus, setSummaryStatus] = useState<string>('completed');
     const [textLoading, setTextLoading] = useState(false);
-    const [videoUrl, setVideoUrl] = useState<string | null>(null);
-    const [videoLoading, setVideoLoading] = useState(false);
-    const [videoError, setVideoError] = useState<string | null>(null);
-    const [summaryAudioState, setSummaryAudioState] = useState<'idle' | 'loading' | 'playing'>('idle');
-    const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
+    // Replaces Tavus's server-rendered video entirely - the 3D avatar
+    // (AvatarCanvas) just needs a TTS audio URL and lip-syncs to it live in
+    // the browser, so there's no video generation/polling state to manage
+    // anymore (no videoLoading/videoError/Generate-Refresh buttons).
+    const [avatarAudioUrl, setAvatarAudioUrl] = useState<string | null>(null);
+    const summaryTtsInFlightRef = useRef<string | null>(null);
+    const [summaryAudioState, setSummaryAudioState] = useState<'idle' | 'loading'>('idle');
     const summaryHashValue = summaryText && summaryText.trim().length > 0
       ? `${summaryText.length}-${summaryText.slice(0, 64)}`
       : undefined;
@@ -1633,10 +1636,35 @@ startxref
     useEffect(() => {
       if (!selectedFile) return;
       setBrokenSummaryImages(new Set());
+      setAvatarAudioUrl(null);
       loadLinksForFile(selectedFile);
       loadSummaryForFile(selectedFile);
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedFile]);
+
+    // Automatically pre-generate Summary TTS in background while user goes through AI Tutor content
+    useEffect(() => {
+      if (!summaryText || !selectedFile || avatarAudioUrl) return;
+      const ttsKey = `${selectedFile}_${summaryText.slice(0, 50)}`;
+      if (summaryTtsInFlightRef.current === ttsKey) return;
+      summaryTtsInFlightRef.current = ttsKey;
+
+      let isMounted = true;
+      const pregenerateTTS = async () => {
+        try {
+          const ttsResult = await apiService.learningTTS(summaryText, selectedFile);
+          if (isMounted && ttsResult.audioUrl) {
+            setAvatarAudioUrl(ttsResult.audioUrl);
+            console.log('[Background Summary TTS] Pre-generation ready for:', selectedFile);
+          }
+        } catch (err) {
+          console.warn('[Background Summary TTS] Notice:', err);
+          summaryTtsInFlightRef.current = null;
+        }
+      };
+      pregenerateTTS();
+      return () => { isMounted = false; };
+    }, [summaryText, selectedFile, avatarAudioUrl]);
 
     // Load available files for Q&A
     useEffect(() => {
@@ -1691,96 +1719,6 @@ startxref
 
       loadAvailableFiles();
     }, [selectedFile]);
-
-    const loadLatestVideo = useCallback(async (targetFile?: string) => {
-      const fileName = targetFile || selectedFile || availableFiles[0];
-      if (!fileName) {
-        setVideoUrl(null);
-        setVideoError(null);
-        return;
-      }
-      setVideoLoading(true);
-      setVideoError(null);
-      try {
-        const response = await apiService.getLatestLipsyncVideo(fileName);
-        if (response.video_url) {
-          setVideoUrl(response.video_url);
-        } else {
-          setVideoUrl(null);
-          setVideoError('No lipsync video available yet. Generate one to get started.');
-        }
-      } catch (error) {
-        console.error('Failed to load latest video:', error);
-        setVideoUrl(null);
-        setVideoError(error instanceof Error ? error.message : 'Failed to load video');
-      } finally {
-        setVideoLoading(false);
-      }
-    }, [selectedFile, availableFiles]);
-
-    useEffect(() => {
-      loadLatestVideo(selectedFile);
-    }, [selectedFile, loadLatestVideo]);
-
-    // Auto-poll for new videos every 10 seconds
-    useEffect(() => {
-      // Don't poll if we already have a video for this file
-      if (videoUrl) return;
-
-      const pollInterval = setInterval(() => {
-        loadLatestVideo(selectedFile);
-      }, 10000); // Poll every 10 seconds
-
-      return () => clearInterval(pollInterval); // Cleanup on unmount
-    }, [selectedFile, loadLatestVideo, videoUrl]);
-
-
-
-
-    const handleRefreshVideo = async () => {
-      await loadLatestVideo(selectedFile);
-    };
-
-    const handleGenerateVideo = async () => {
-      const fileName = selectedFile || availableFiles[0];
-      if (!fileName) {
-        setVideoError('Upload and select a document to generate a video.');
-        return;
-      }
-      setVideoLoading(true);
-      setVideoError(null);
-      const requestedAt = Date.now();
-      try {
-        // The backend now returns immediately (video generation runs in a
-        // background thread - it can take up to several minutes via Tavus)
-        // instead of blocking this request for the whole duration, which
-        // used to guarantee a 504 from any reverse proxy with a shorter
-        // timeout. Poll for the result here instead of a single check.
-        await apiService.generateLipsyncVideo(fileName);
-
-        const pollIntervalMs = 8000;
-        const timeoutMs = 5 * 60 * 1000; // matches the old synchronous wait
-        let found = false;
-        while (Date.now() - requestedAt < timeoutMs) {
-          await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
-          const latest = await apiService.getLatestLipsyncVideo(fileName);
-          const createdAt = latest.created_at ? new Date(latest.created_at).getTime() : 0;
-          if (latest.video_url && createdAt >= requestedAt) {
-            setVideoUrl(latest.video_url);
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          setVideoError('Video is taking longer than expected - check back in a bit or tap Refresh.');
-        }
-      } catch (error) {
-        console.error('Failed to generate lipsync video:', error);
-        setVideoError(error instanceof Error ? error.message : 'Failed to generate lipsync video');
-      } finally {
-        setVideoLoading(false);
-      }
-    };
 
     // Update bot message when file selection changes
     useEffect(() => {
@@ -1900,9 +1838,12 @@ startxref
 
         setChatMessages(prev => [...prev, userMsg, botMsg]);
 
-        // Play TTS if available
+        // Play TTS if available & seamlessly trigger Summary TTS upon completion
         if (data.audioUrl) {
           const audio = new Audio(data.audioUrl);
+          audio.onended = () => {
+            handlePlaySummaryAudio();
+          };
           audio.play();
         }
 
@@ -1998,6 +1939,9 @@ startxref
             const ttsData = await ttsResponse.json();
             if (ttsData.audioUrl) {
               const audio = new Audio(ttsData.audioUrl);
+              audio.onended = () => {
+                handlePlaySummaryAudio();
+              };
               audio.play();
             }
           }
@@ -2181,43 +2125,52 @@ startxref
       </div>
     );
 
-    const renderVideoPlayer = () => (
-      <div className="bg-gray-100 rounded-lg aspect-video flex items-center justify-center overflow-hidden">
-        {videoLoading ? (
-          <div className="flex flex-col items-center text-gray-500">
-            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
-            <p className="text-sm">Preparing your video...</p>
-          </div>
-        ) : videoUrl ? (
-          <video
-            key={videoUrl}
-            src={videoUrl}
-            controls
-            preload="metadata"
-            loop
-            playsInline
-            className="w-full h-full object-cover rounded-lg"
-          />
-        ) : (
-          <div className="text-gray-500 text-center">
-            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
-              <span className="text-2xl">▶</span>
-            </div>
-            <p className="text-sm">Video will appear here</p>
-            <p className="text-xs text-gray-400">Generate a lipsync video to get started</p>
-          </div>
-        )}
-      </div>
-    );
+    // AvatarCanvas owns its own loading state (3D model) and play/pause UI -
+    // it just needs the current audioUrl and animates/plays it itself, so
+    // there's no "video missing/loading/generate" branching needed here
+    // anymore the way the old <video> element required.
+    const renderVideoPlayer = () => {
+      const defaultKeywords = [
+        { title: "SaaS", subtitle: "Cloud Services" },
+        { title: "Virtualization", subtitle: "Core Technology" },
+        { title: "Networking", subtitle: "Internet Architecture" },
+        { title: "Security", subtitle: "Data Leakage & Privacy" },
+      ];
 
-    // Shared by the desktop and mobile "Listen" buttons - gives the summary
-    // a real listen-instead-of-read option (previously only existed on
-    // desktop as a fire-and-forget button with no play/pause state; mobile
-    // had no audio option for the summary at all).
+      const extractedKeywords = (referenceLinks && referenceLinks.length > 0)
+        ? referenceLinks.slice(0, 4).map((link, idx) => {
+            const cleanTitle = link.title ? link.title.replace(/\b(PDF|PPT|Doc|Home|Page|http|https)\b/gi, '').trim() : '';
+            const words = cleanTitle.split(/\s+/).filter(w => w.length > 2);
+            const titleStr = words.slice(0, 2).join(' ') || defaultKeywords[idx % 4].title;
+            const domainStr = link.url ? link.url.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '') : defaultKeywords[idx % 4].subtitle;
+            return { title: titleStr, subtitle: domainStr };
+          })
+        : defaultKeywords;
+
+      const cleanFileName = selectedFile
+        ? selectedFile.replace(/\.pdf$/i, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+        : "Cloud Computing";
+
+      return (
+        <div className="w-full aspect-video min-h-[440px] rounded-3xl overflow-hidden shadow-xl">
+          <AvatarCanvas
+            audioUrl={avatarAudioUrl ?? undefined}
+            onPlayClick={handlePlaySummaryAudio}
+            currentTopic={cleanFileName}
+            keywords={extractedKeywords}
+          />
+        </div>
+      );
+    };
+
+    // Shared by the desktop and mobile "Listen" buttons - fetches TTS audio
+    // for the summary and hands it to the 3D avatar (AvatarCanvas), which
+    // plays it and lip-syncs to it itself; this no longer plays a separate
+    // <audio>/Audio() element (that used to run alongside the avatar and
+    // would double up the audio), and no longer touches Tavus video state.
     const handlePlaySummaryAudio = async () => {
-      if (summaryAudioState === 'playing') {
-        summaryAudioRef.current?.pause();
-        setSummaryAudioState('idle');
+      if (avatarAudioUrl) {
+        // Audio already generated and available on avatar
         return;
       }
       if (!summaryText) {
@@ -2233,23 +2186,12 @@ startxref
       try {
         const ttsResult = await apiService.learningTTS(summaryText, fileName);
         if (ttsResult.audioUrl) {
-          const audio = new Audio(ttsResult.audioUrl);
-          summaryAudioRef.current = audio;
-          audio.onended = () => setSummaryAudioState('idle');
-          await audio.play();
-          setSummaryAudioState('playing');
-        } else {
-          setSummaryAudioState('idle');
-        }
-        if (ttsResult.videoUrl) {
-          setVideoUrl(ttsResult.videoUrl);
-          setVideoError(null);
-        } else if (fileName) {
-          await loadLatestVideo(fileName);
+          setAvatarAudioUrl(ttsResult.audioUrl);
         }
       } catch (error) {
         console.error('Failed to generate/play summary audio:', error);
         showToast(error instanceof Error ? error.message : 'Failed to generate audio. Please try again.', 'error');
+      } finally {
         setSummaryAudioState('idle');
       }
     };
@@ -2263,15 +2205,13 @@ startxref
             ? "text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
             : "flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-600 text-white text-xs font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
         }
-        title={summaryAudioState === 'playing' ? "Pause" : "Listen to summary instead of reading it"}
+        title="Listen to summary instead of reading it - the avatar below will speak and lip-sync it"
       >
         {summaryAudioState === 'loading' ? (
           <>
             <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
             Generating...
           </>
-        ) : summaryAudioState === 'playing' ? (
-          <>⏸ Pause</>
         ) : (
           <>🔊 Listen</>
         )}
@@ -2297,38 +2237,18 @@ startxref
               >
                 <div className="p-4 border-b border-gray-200 bg-blue-50 flex-shrink-0">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-gray-800">Video Explanation</h4>
+                    <h4 className="font-semibold text-gray-800">AI Avatar</h4>
                     <div className="w-2 h-2 bg-gray-400 rounded-full cursor-col-resize"></div>
                   </div>
                 </div>
 
                 <div className="flex-1 bg-blue-50 flex flex-col min-h-0">
-                  {/* Video Section - Fixed at top */}
+                  {/* Avatar Section - Fixed at top */}
                   <div className="p-4 pb-2 bg-blue-50 flex-shrink-0">
                     <div className="flex items-center justify-between mb-3">
-                      <h5 className="font-semibold text-gray-800">Video Explanation</h5>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={handleRefreshVideo}
-                          disabled={videoLoading}
-                          className="text-xs px-2 py-1 bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors disabled:opacity-50"
-                        >
-                          Refresh
-                        </button>
-                        <button
-                          onClick={handleGenerateVideo}
-                          disabled={videoLoading}
-                          className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-                        >
-                          {videoLoading ? 'Working...' : 'Generate'}
-                        </button>
-                      </div>
+                      <h5 className="font-semibold text-gray-800">AI Avatar</h5>
                     </div>
                     {renderVideoPlayer()}
-
-                    {videoError && (
-                      <p className="text-xs text-red-600 mt-2">{videoError}</p>
-                    )}
                   </div>
 
                   {/* Reference Links - Scrollable area */}
@@ -2365,7 +2285,6 @@ startxref
                           AI Summary
                         </h5>
                         <div className="flex items-center gap-2">
-                          {renderListenButton('desktop')}
                           <button
                             onClick={() => {
                               if (!selectedFile) return;
@@ -2618,26 +2537,9 @@ startxref
             <div className="lg:hidden flex-1 overflow-y-auto min-h-0 hide-scrollbar p-4 pb-24 space-y-4">
               <div className="bg-blue-50 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h5 className="font-semibold text-gray-800">Video Explanation</h5>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleRefreshVideo}
-                      disabled={videoLoading}
-                      className="text-xs px-2 py-1 bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors disabled:opacity-50"
-                    >
-                      Refresh
-                    </button>
-                    <button
-                      onClick={handleGenerateVideo}
-                      disabled={videoLoading}
-                      className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-                    >
-                      {videoLoading ? 'Working...' : 'Generate'}
-                    </button>
-                  </div>
+                  <h5 className="font-semibold text-gray-800">AI Avatar</h5>
                 </div>
                 {renderVideoPlayer()}
-                {videoError && <p className="text-xs text-red-600 mt-2">{videoError}</p>}
               </div>
 
               <div className="bg-green-50 rounded-xl p-4">
@@ -2646,7 +2548,6 @@ startxref
                     <BookOpen size={20} className="text-green-600" />
                     AI Summary
                   </h5>
-                  {renderListenButton('mobile')}
                 </div>
                 {renderSummaryWithImages()}
               </div>

@@ -25,6 +25,11 @@ export default defineConfig({
           katex: ["katex", "react-markdown", "remark-math", "remark-gfm", "rehype-katex", "rehype-raw"],
           clerk: ["@clerk/react"],
           "vendor-react": ["react", "react-dom", "react-router-dom"],
+          // three.js (the 3D avatar's renderer) is large and changes far
+          // less often than app code - its own chunk so a Study.tsx edit
+          // doesn't force re-downloading it, and so it's not entangled
+          // with the rest of the Study bundle.
+          three: ["three"],
         },
       },
     },

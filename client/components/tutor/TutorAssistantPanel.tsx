@@ -41,6 +41,7 @@ interface TutorAssistantPanelProps {
   currentTopicId?: string;
   currentTopicTitle?: string;
   currentExplanation?: string;
+  onTutorSpeechEnd?: () => void;
 }
 
 export function TutorAssistantPanel({
@@ -49,6 +50,7 @@ export function TutorAssistantPanel({
   currentTopicId,
   currentTopicTitle,
   currentExplanation,
+  onTutorSpeechEnd,
 }: TutorAssistantPanelProps) {
   const { showToast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -72,7 +74,12 @@ export function TutorAssistantPanel({
     const audio = new Audio(url);
     audioRef.current = audio;
     setSpeakingId(id);
-    audio.onended = () => setSpeakingId(null);
+    audio.onended = () => {
+      setSpeakingId(null);
+      if (onTutorSpeechEnd) {
+        onTutorSpeechEnd();
+      }
+    };
     audio.play().catch(() => setSpeakingId(null));
   };
 
