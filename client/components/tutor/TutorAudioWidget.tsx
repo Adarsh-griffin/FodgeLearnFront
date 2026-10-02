@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Play, Pause, Loader2 } from "lucide-react";
 
-const POSITION_STORAGE_KEY = "learnforge_tutor_audio_widget_pos";
 const WIDGET_WIDTH = 224; // w-56
 const WIDGET_DEFAULT_HEIGHT = 240;
 const EDGE_MARGIN = 16;
@@ -37,7 +36,9 @@ interface TutorAudioWidgetProps {
  * too - clicks/taps on the play button/scrubber/speed control are excluded
  * from the drag) so the learner can park it wherever it doesn't block the
  * lesson text; position is clamped to the viewport (keeping clear of the
- * fixed mobile bottom nav) and remembered per-browser in localStorage.
+ * fixed mobile bottom nav); position resets to the default spot on every
+ * reload rather than being remembered, since nothing in this app persists
+ * to local storage.
  */
 export function TutorAudioWidget({
   hasAudio,
@@ -68,18 +69,6 @@ export function TutorAudioWidget({
   }, []);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(POSITION_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
-          setPosition(clamp(parsed.x, parsed.y));
-          return;
-        }
-      }
-    } catch {
-      // ignore - fall through to default position
-    }
     setPosition(
       clamp(
         EDGE_MARGIN,
@@ -114,16 +103,6 @@ export function TutorAudioWidget({
     dragState.current.dragging = false;
     const el = widgetRef.current;
     if (el?.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
-    setPosition((pos) => {
-      if (pos) {
-        try {
-          localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(pos));
-        } catch {
-          // ignore - position just won't persist across reloads
-        }
-      }
-      return pos;
-    });
   };
 
   if (!position) return null;

@@ -1189,6 +1189,14 @@ export function StudyPage() {
   // on the progress section instead of staying wherever they were (e.g. down
   // at the topic-name box they just typed into) with no visible feedback.
   const uploadedFilesRef = useRef<HTMLDivElement>(null);
+  // Tells TutorTab "study THIS document" right after an upload, in plain
+  // React state (not localStorage) - cleared once TutorTab has consumed it.
+  const [pendingTutorFileId, setPendingTutorFileId] = useState<string | null>(null);
+  // Mirrors whichever document TutorTab is currently studying, so the
+  // globally-reachable MobileTutorSheet (bottom nav, any tab) knows what to
+  // scope its questions to - previously read from a localStorage key that
+  // nothing writes to anymore.
+  const [currentTutorFileName, setCurrentTutorFileName] = useState<string | null>(null);
 
   // Topic Learning State
   const [isSubmittingTopic, setIsSubmittingTopic] = useState(false);
@@ -1263,15 +1271,7 @@ startxref
     }
   }, [searchParams]);
 
-  // Clear cache when switching to learning tab to ensure fresh data
   const handleTabChange = (tab: "upload" | "learning" | "assessment" | "tutor") => {
-    if (tab === "learning") {
-      // Clear cache when switching to learning tab to get fresh data
-      localStorage.removeItem('neurolearn_summary_text');
-      localStorage.removeItem('neurolearn_text_timestamp');
-      localStorage.removeItem('neurolearn_reference_links');
-      localStorage.removeItem('neurolearn_links_timestamp');
-    }
     setActiveTab(tab);
     // Keep the URL in sync so refreshing the page (or sharing/bookmarking
     // the link) lands back on the SAME tab - this used to only update React
@@ -1376,22 +1376,13 @@ startxref
           // Complete progress
           setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
 
-          // Clear cache when new document is uploaded
-          localStorage.removeItem('neurolearn_summary_text');
-          localStorage.removeItem('neurolearn_text_timestamp');
-          localStorage.removeItem('neurolearn_reference_links');
-          localStorage.removeItem('neurolearn_links_timestamp');
-          localStorage.removeItem('neurolearn_available_files');
-          localStorage.removeItem('neurolearn_files_timestamp');
-
-          // Point the AI Tutor tab at THIS document (overwrites its cached
-          // selection) - otherwise TutorTab restores whatever was last
-          // studied and silently ignores that a new file was just uploaded,
-          // e.g. typing a fresh topic name then getting quizzed on an
-          // unrelated PDF from a previous session.
+          // Point the AI Tutor tab at THIS document via React state (not
+          // localStorage) - otherwise TutorTab resumes whatever it was
+          // last studying server-side and silently ignores that a new
+          // file was just uploaded, e.g. typing a fresh topic name then
+          // getting quizzed on an unrelated PDF from a previous session.
           if (response.fileId) {
-            localStorage.setItem('neurolearn_tutor_file_id', response.fileId);
-            localStorage.setItem('neurolearn_tutor_file_name', file.name);
+            setPendingTutorFileId(response.fileId);
           }
 
           // Start polling for processing status
@@ -1441,11 +1432,6 @@ startxref
 
       if (status.status === 'completed') {
         setSuccessMessages(prev => ({ ...prev, [filename]: true }));
-
-        localStorage.removeItem('neurolearn_summary_text');
-        localStorage.removeItem('neurolearn_text_timestamp');
-        localStorage.removeItem('neurolearn_reference_links');
-        localStorage.removeItem('neurolearn_links_timestamp');
       } else if (status.status === 'processing') {
         // Continue polling every 3 seconds
         setTimeout(() => pollProcessingStatus(filename), 3000);
@@ -1509,25 +1495,14 @@ startxref
       ? `${summaryText.length}-${summaryText.slice(0, 64)}`
       : undefined;
 
-    // Chat functionality
-    const [chatMessages, setChatMessages] = useState<Array<{ id: string, type: 'user' | 'bot', content: string, timestamp: Date }>>(() => {
-      // Load chat history from localStorage on initialization
-      try {
-        const cachedChat = localStorage.getItem('neurolearn_chat_history');
-        if (cachedChat) {
-          const parsedChat = JSON.parse(cachedChat);
-          // Convert timestamp strings back to Date objects
-          return parsedChat.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
-          }));
-        }
-      } catch (error) {
-        console.error('Failed to load chat history from cache:', error);
-      }
-      // Default message if no cache
-      return [{ id: '1', type: 'bot', content: 'Heyy any doubts?', timestamp: new Date() }];
-    });
+    // Chat functionality - no persistence: starts fresh each visit instead
+    // of mirroring message history into localStorage. (This Q&A chat has no
+    // MongoDB-backed history endpoint the way AI Tutor's own chat does; a
+    // real "remember my Q&A chat" feature would need one, which is out of
+    // scope for just removing client-side caching.)
+    const [chatMessages, setChatMessages] = useState<Array<{ id: string, type: 'user' | 'bot', content: string, timestamp: Date }>>(
+      () => [{ id: '1', type: 'bot', content: 'Heyy any doubts?', timestamp: new Date() }],
+    );
     const [currentMessage, setCurrentMessage] = useState('');
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -1551,30 +1526,16 @@ startxref
     // most recently uploaded document, regardless of selection - and a
     // freshly-selected document with no summary yet just looked broken
     // instead of "still processing").
+    // No client-side caching - MongoDB (via the backend) is the single
+    // source of truth, fetched fresh every time a document is selected.
+    // This used to mirror summary text/images and reference links into
+    // localStorage with a 5-minute TTL, which only duplicated data the
+    // backend already serves and added weight to every page load.
     const loadLinksForFile = async (fileName: string) => {
-      const cacheKey = `neurolearn_reference_links_${fileName}`;
-      const cacheTimestampKey = `neurolearn_links_timestamp_${fileName}`;
-      const cachedLinks = localStorage.getItem(cacheKey);
-      const cacheTimestamp = localStorage.getItem(cacheTimestampKey);
-      const now = Date.now();
-      const cacheAge = cacheTimestamp ? now - parseInt(cacheTimestamp) : Infinity;
-      const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-      if (cachedLinks && cacheAge < CACHE_DURATION) {
-        try {
-          setReferenceLinks(JSON.parse(cachedLinks));
-          return;
-        } catch (error) {
-          console.error('Failed to parse cached links:', error);
-        }
-      }
-
       setLinksLoading(true);
       try {
         const links = await apiService.getLinks(fileName);
         setReferenceLinks(links);
-        localStorage.setItem(cacheKey, JSON.stringify(links));
-        localStorage.setItem(cacheTimestampKey, now.toString());
       } catch (error) {
         console.error('Failed to load reference links:', error);
         setReferenceLinks([]);
@@ -1584,44 +1545,12 @@ startxref
     };
 
     const loadSummaryForFile = async (fileName: string) => {
-      const textCacheKey = `neurolearn_summary_text_${fileName}`;
-      const imagesCacheKey = `neurolearn_summary_images_${fileName}`;
-      const timestampKey = `neurolearn_text_timestamp_${fileName}`;
-      const cachedText = localStorage.getItem(textCacheKey);
-      const cachedImages = localStorage.getItem(imagesCacheKey);
-      const cacheTimestamp = localStorage.getItem(timestampKey);
-      const now = Date.now();
-      const cacheAge = cacheTimestamp ? now - parseInt(cacheTimestamp) : Infinity;
-      const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-      if (cachedText && cacheAge < CACHE_DURATION) {
-        setSummaryText(cachedText);
-        setSummaryStatus('completed');
-        if (cachedImages) {
-          try {
-            setSummaryImages(JSON.parse(cachedImages));
-          } catch (e) {
-            console.error('Failed to parse cached images:', e);
-          }
-        }
-        return;
-      }
-
       setTextLoading(true);
       try {
         const { text, images, status } = await apiService.getText(fileName);
         setSummaryText(text);
         setSummaryImages(images);
         setSummaryStatus(status);
-
-        // Only cache a genuinely finished summary - caching "processing"
-        // would freeze the UI on that message for 5 minutes even after the
-        // real summary finishes generating in the background.
-        if (status === 'completed') {
-          localStorage.setItem(textCacheKey, text);
-          localStorage.setItem(imagesCacheKey, JSON.stringify(images));
-          localStorage.setItem(timestampKey, now.toString());
-        }
       } catch (error) {
         console.error('Failed to load summary text:', error);
         setSummaryText('');
@@ -1666,49 +1595,22 @@ startxref
       return () => { isMounted = false; };
     }, [summaryText, selectedFile, avatarAudioUrl]);
 
-    // Load available files for Q&A
+    // Load available files for Q&A - fetched fresh from the backend every
+    // time (no localStorage cache); also now goes through apiService
+    // instead of a raw fetch() call, matching the rest of the app.
     useEffect(() => {
       const loadAvailableFiles = async () => {
-        // Check localStorage first
-        const cachedFiles = localStorage.getItem('neurolearn_available_files');
-        const cacheTimestamp = localStorage.getItem('neurolearn_files_timestamp');
-        const now = Date.now();
-        const cacheAge = cacheTimestamp ? now - parseInt(cacheTimestamp) : Infinity;
-        const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes (shorter for files as they change more often)
-
-        if (cachedFiles && cacheAge < CACHE_DURATION) {
-          try {
-            const fileList = JSON.parse(cachedFiles);
-            setAvailableFiles(fileList);
-            // Set the first file (most recent) as default
-            if (fileList.length > 0 && !selectedFile) {
-              setSelectedFile(fileList[0]);
-            }
-            return;
-          } catch (error) {
-            console.error('Failed to parse cached files:', error);
-          }
-        }
-
         setFilesLoading(true);
         try {
-          const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/files`);
-          if (response.ok) {
-            // /api/files now returns {_id, originalName, uploadDate, size, folder}[]
-            // instead of a bare string[] (so the AI Tutor tab has a stable
-            // fileId to key off) - reduce to filenames here since that's all
-            // this dropdown/cache has ever used.
-            const fileObjects: { originalName: string }[] = await response.json();
-            const fileList = fileObjects.map((f) => f.originalName).filter(Boolean);
-            setAvailableFiles(fileList);
-            // Set the first file (most recent) as default
-            if (fileList.length > 0 && !selectedFile) {
-              setSelectedFile(fileList[0]);
-            }
-
-            // Cache the files
-            localStorage.setItem('neurolearn_available_files', JSON.stringify(fileList));
-            localStorage.setItem('neurolearn_files_timestamp', now.toString());
+          // /api/files returns {_id, originalName, uploadDate, size, folder}[]
+          // (so the AI Tutor tab has a stable fileId to key off) - reduce to
+          // filenames here since that's all this dropdown has ever used.
+          const fileObjects = await apiService.getFiles();
+          const fileList = fileObjects.map((f) => f.originalName).filter(Boolean);
+          setAvailableFiles(fileList);
+          // Set the first file (most recent) as default
+          if (fileList.length > 0 && !selectedFile) {
+            setSelectedFile(fileList[0]);
           }
         } catch (error) {
           console.error('Error loading available files:', error);
@@ -1740,15 +1642,6 @@ startxref
     useEffect(() => {
       if (chatScrollRef.current) {
         chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-      }
-    }, [chatMessages]);
-
-    // Save chat history to localStorage whenever it changes
-    useEffect(() => {
-      try {
-        localStorage.setItem('neurolearn_chat_history', JSON.stringify(chatMessages));
-      } catch (error) {
-        console.error('Failed to save chat history to cache:', error);
       }
     }, [chatMessages]);
 
@@ -2228,9 +2121,9 @@ startxref
             fileName={selectedFile || null}
           />
 
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 min-w-0">
             {/* Desktop: resizable 3-column layout (Video+Links / AI Summary / AI Tutor chat) */}
-            <div ref={containerRef} className="hidden lg:flex flex-1 flex-row overflow-hidden min-h-0">
+            <div ref={containerRef} className="hidden lg:flex flex-1 flex-row overflow-hidden min-h-0 min-w-0">
               <div
                 className="border-r border-gray-200 flex flex-col min-w-0 min-h-0"
                 style={{ width: `${sectionWidths[0]}%` }}
@@ -2288,9 +2181,6 @@ startxref
                           <button
                             onClick={() => {
                               if (!selectedFile) return;
-                              localStorage.removeItem(`neurolearn_summary_text_${selectedFile}`);
-                              localStorage.removeItem(`neurolearn_summary_images_${selectedFile}`);
-                              localStorage.removeItem(`neurolearn_text_timestamp_${selectedFile}`);
                               loadSummaryForFile(selectedFile);
                             }}
                             disabled={!selectedFile || textLoading}
@@ -2369,16 +2259,11 @@ startxref
                         onClick={async () => {
                           setFilesLoading(true);
                           try {
-                            localStorage.removeItem('neurolearn_available_files');
-                            localStorage.removeItem('neurolearn_files_timestamp');
-                            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/files`);
-                            if (response.ok) {
-                              const fileObjects: { originalName: string }[] = await response.json();
-                              const fileList = fileObjects.map((f) => f.originalName).filter(Boolean);
-                              setAvailableFiles(fileList);
-                              if (fileList.length > 0 && !fileList.includes(selectedFile)) {
-                                setSelectedFile(fileList[0]);
-                              }
+                            const fileObjects = await apiService.getFiles();
+                            const fileList = fileObjects.map((f) => f.originalName).filter(Boolean);
+                            setAvailableFiles(fileList);
+                            if (fileList.length > 0 && !fileList.includes(selectedFile)) {
+                              setSelectedFile(fileList[0]);
                             }
                           } catch (error) {
                             console.error('Error refreshing files:', error);
@@ -2659,7 +2544,15 @@ startxref
         )}
         {activeTab === "learning" && <LearningTab files={files} />}
         {activeTab === "assessment" && <AssessmentTab handleTabChange={handleTabChange} navigate={navigate} />}
-        {activeTab === "tutor" && <TutorTab handleTabChange={handleTabChange} navigate={navigate} />}
+        {activeTab === "tutor" && (
+          <TutorTab
+            handleTabChange={handleTabChange}
+            navigate={navigate}
+            pendingFileId={pendingTutorFileId}
+            onConsumePendingFileId={() => setPendingTutorFileId(null)}
+            onFileSelected={setCurrentTutorFileName}
+          />
+        )}
       </div>
 
       {/* Global Mobile Bottom Dock Navigation Bar (< lg) */}
@@ -2674,7 +2567,7 @@ startxref
       <MobileTutorSheet
         isOpen={isMobileTutorSheetOpen}
         onClose={() => setIsMobileTutorSheetOpen(false)}
-        fileName={localStorage.getItem("neurolearn_tutor_file_name")}
+        fileName={currentTutorFileName}
       />
     </div>
   );

@@ -1,8 +1,6 @@
-import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import { AnimatedHeroOverlay } from "@/components/AnimatedHeroOverlay";
-import { useReturningStatus } from "@/lib/useReturningStatus";
-import { useAuthGate } from "@/lib/AuthGateContext";
+import { useStartLearning } from "@/lib/useStartLearning";
 import { useEffect, useRef, useState } from "react";
 
 const FLOW_ITEMS = [
@@ -39,22 +37,10 @@ const FLOW_ITEMS = [
 export function Home() {
   const [activeSection, setActiveSection] = useState(0);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const { openAuthGate } = useAuthGate();
-  const navigate = useNavigate();
-
-  // Backed by actual saved AI Tutor progress on the server - see
-  // useReturningStatus for why "is this browser identified" alone isn't
-  // enough (deleting student_profiles in Mongo should send a student back
-  // through the auth gate, not silently skip it with nothing to resume).
-  const isReturning = useReturningStatus();
-
-  const handleGetStarted = () => {
-    if (isReturning) {
-      navigate("/study");
-    } else {
-      openAuthGate();
-    }
-  };
+  // Shared with Navigation's "Start Now" button - same hook, so the two
+  // are guaranteed to behave identically instead of being two copies of
+  // the same logic kept in sync by hand.
+  const { start: handleGetStarted, isReturning } = useStartLearning();
 
   useEffect(() => {
     const handleScroll = () => {

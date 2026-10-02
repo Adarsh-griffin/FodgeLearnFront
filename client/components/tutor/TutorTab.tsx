@@ -17,15 +17,21 @@ import { UserMenu } from "@/components/UserMenu";
 
 type Stage = "loading" | "select_file" | "onboarding" | "diagnostic" | "generating_plan" | "roadmap" | "lesson" | "complete";
 
-const FILE_ID_KEY = "neurolearn_tutor_file_id";
-const FILE_NAME_KEY = "neurolearn_tutor_file_name";
-
 interface TutorTabProps {
   handleTabChange: (tab: "upload" | "learning" | "assessment" | "tutor") => void;
   navigate: (path: string | number) => void;
+  /** Set right after a fresh upload (see Study.tsx) - study THIS document
+   * instead of resuming the latest one from MongoDB. Plain React state
+   * passed down from StudyPage, not localStorage. */
+  pendingFileId?: string | null;
+  /** Called once pendingFileId has been acted on, so it doesn't re-trigger. */
+  onConsumePendingFileId?: () => void;
+  /** Reports whichever file this tab is currently studying, so StudyPage
+   * can hand it to the globally-reachable MobileTutorSheet. */
+  onFileSelected?: (fileName: string | null) => void;
 }
 
-export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
+export function TutorTab({ handleTabChange, navigate, pendingFileId, onConsumePendingFileId, onFileSelected }: TutorTabProps) {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const [stage, setStage] = useState<Stage>("loading");
   const [files, setFiles] = useState<FileInfo[]>([]);
@@ -41,6 +47,13 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
   // Mobile Sheet & Drawer States
   const [isMobileTutorSheetOpen, setIsMobileTutorSheetOpen] = useState(false);
   const [isMobileNavDrawerOpen, setIsMobileNavDrawerOpen] = useState(false);
+
+  // Keeps StudyPage (and in turn the global MobileTutorSheet) in sync
+  // whichever way selectedFileName changes, instead of remembering to call
+  // onFileSelected at every individual call site.
+  useEffect(() => {
+    onFileSelected?.(selectedFileName);
+  }, [selectedFileName, onFileSelected]);
 
   const handleMasteryUpdate = (topicId: string, mastery: number) => {
     setPlan((prev) =>
@@ -75,47 +88,63 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
     }
   };
 
+  // Resumes "which document was I last studying" from MongoDB
+  // (student_profiles.updated_at, via /api/tutor/latest-file) instead of a
+  // locally-cached file id/name - the backend already knows this (every
+  // interaction touches updated_at), so there's nothing to duplicate
+  // client-side.
   useEffect(() => {
     if (!isLoaded) return;
     let cancelled = false;
-    apiService
-      .getFiles()
-      .then((list) => {
+    (async () => {
+      try {
+        const list = await apiService.getFiles();
         if (cancelled) return;
         setFiles(list);
-        const cachedId = localStorage.getItem(FILE_ID_KEY);
-        const cachedName = localStorage.getItem(FILE_NAME_KEY);
-        const stillExists = cachedId && list.some((f) => f._id === cachedId);
-        if (stillExists) {
-          setSelectedFileId(cachedId);
-          setSelectedFileName(cachedName);
-          resumeProgress(cachedId);
+
+        // A just-uploaded document (see Study.tsx) takes priority over
+        // whatever was last studied, so typing a fresh topic name doesn't
+        // land the student back in an unrelated previous session.
+        if (pendingFileId && list.some((f) => f._id === pendingFileId)) {
+          const file = list.find((f) => f._id === pendingFileId)!;
+          setSelectedFileId(file._id);
+          setSelectedFileName(file.originalName);
+          resumeProgress(file._id);
+          onConsumePendingFileId?.();
+          return;
+        }
+
+        const headers = await getAuthHeaders();
+        const latest = await apiService.getLatestTutorFile(headers);
+        const stillExists = latest.fileId && list.some((f) => f._id === latest.fileId);
+        if (cancelled) return;
+
+        if (stillExists && latest.fileId) {
+          setSelectedFileId(latest.fileId);
+          setSelectedFileName(latest.fileName);
+          resumeProgress(latest.fileId);
         } else {
           setStage("select_file");
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!cancelled) {
           setFilesError(err instanceof Error ? err.message : "Failed to load your documents");
           setStage("select_file");
         }
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [isLoaded]);
+  }, [isLoaded, pendingFileId]);
 
   const handleSelectFile = (file: FileInfo) => {
-    localStorage.setItem(FILE_ID_KEY, file._id);
-    localStorage.setItem(FILE_NAME_KEY, file.originalName);
     setSelectedFileId(file._id);
     setSelectedFileName(file.originalName);
     resumeProgress(file._id);
   };
 
   const handleChangeDocument = () => {
-    localStorage.removeItem(FILE_ID_KEY);
-    localStorage.removeItem(FILE_NAME_KEY);
     setSelectedFileId(null);
     setSelectedFileName(null);
     setPlan(null);
@@ -254,7 +283,7 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
           onChangeDocument={handleChangeDocument}
         />
 
-        <div className="flex-1 flex min-h-0 overflow-hidden w-full">
+        <div className="flex-1 flex min-w-0 min-h-0 overflow-hidden w-full">
           {stage === "onboarding" && <OnboardingStep onComplete={handleOnboardingComplete} />}
 
           {stage === "diagnostic" && (

@@ -600,6 +600,18 @@ class ApiService {
     return !!data.hasProfile;
   }
 
+  /** The file_id/fileName of this user's most recently active AI Tutor
+   * session, read from MongoDB (student_profiles.updated_at) - used to
+   * resume the AI Tutor tab on load without a locally-cached file pointer. */
+  async getLatestTutorFile(authHeaders: Record<string, string>): Promise<{ fileId: string | null; fileName: string | null }> {
+    const response = await fetch(`${this.baseURL}/api/tutor/latest-file`, {
+      headers: authHeaders,
+    });
+    if (!response.ok) return { fileId: null, fileName: null };
+    const data = await response.json().catch(() => ({}));
+    return { fileId: data.fileId ?? null, fileName: data.fileName ?? null };
+  }
+
   /** "Delete Profile" in the account menu - wipes all saved AI Tutor progress for this identity. */
   async deleteTutorProfile(authHeaders: Record<string, string>): Promise<void> {
     const response = await fetch(`${this.baseURL}/api/tutor/profile`, {

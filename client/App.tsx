@@ -10,6 +10,7 @@ import { Footer } from "@/components/Footer";
 import { AuthGateModal } from "@/components/AuthGateModal";
 import { AuthGateProvider, useAuthGate } from "@/lib/AuthGateContext";
 import { ToastProvider } from "@/lib/ToastContext";
+import { AILearningLoader } from "@/components/ui/AILearningLoader";
 import { Home } from "./pages/Home";
 import NotFound from "./pages/NotFound";
 
@@ -82,7 +83,7 @@ const App = () => {
                     <Suspense
                       fallback={
                         <div className="flex items-center justify-center min-h-screen">
-                          <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                          <AILearningLoader size="lg" message="Loading LearnForge..." />
                         </div>
                       }
                     >

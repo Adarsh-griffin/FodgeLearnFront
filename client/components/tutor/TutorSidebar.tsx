@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Home,
   BookOpen,
@@ -13,8 +13,6 @@ import {
   PanelLeftOpen
 } from "lucide-react";
 import { StudyPlan } from "@/lib/api";
-
-const COLLAPSED_STORAGE_KEY = "learnforge_sidebar_collapsed";
 
 interface TutorSidebarProps {
   activeTab: "upload" | "learning" | "assessment" | "tutor";
@@ -36,24 +34,10 @@ export function TutorSidebar({
   currentTopicId,
   onChangeDocument,
 }: TutorSidebarProps) {
-  // Persisted per-browser so collapsing it once sticks across page/tab
-  // switches (Upload/AI Tutor/Summary/Assessments all render this same
-  // sidebar) instead of resetting back open every navigation.
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(COLLAPSED_STORAGE_KEY) === "true";
-    } catch {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(COLLAPSED_STORAGE_KEY, String(isCollapsed));
-    } catch {
-      // ignore - collapse state just won't persist across reloads
-    }
-  }, [isCollapsed]);
+  // Collapse state is in-memory only: it sticks across tab switches within
+  // this page session but resets on reload, since nothing in this app
+  // persists to local storage.
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const navItems = [
     { id: "home", label: "Home", icon: Home, action: () => navigate("/") },

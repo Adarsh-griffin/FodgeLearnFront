@@ -46,14 +46,29 @@ export function hasAnonymousId(): boolean {
 /**
  * Builds the one header every /api/tutor/* call needs.
  * `getToken` is Clerk's useAuth().getToken - pass it only when signed in.
+ *
+ * Retries getToken() a few times before giving up: right after a fresh
+ * sign-in (or on a repeat visit while Clerk is still rehydrating the
+ * session), isSignedIn can flip true a moment before getToken() actually
+ * has a token ready, and getToken() returns null during that gap. This
+ * used to silently fall through to the anonymous-guest header on ANY
+ * null - meaning a signed-in user's request could silently run under a
+ * completely different (anonymous) identity instead of their real
+ * account, right at the moment they sign in - which is exactly the
+ * "works the first time, breaks on re-login" symptom: the anonymous
+ * identity has no saved progress, so the app looks like it forgot them.
  */
 export async function getTutorAuthHeaders(
   isSignedIn: boolean,
   getToken: () => Promise<string | null>,
 ): Promise<Record<string, string>> {
   if (isSignedIn) {
-    const token = await getToken();
-    if (token) return { Authorization: `Bearer ${token}` };
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const token = await getToken();
+      if (token) return { Authorization: `Bearer ${token}` };
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    console.warn("[identity] Signed in but no Clerk token after 3 attempts - falling back to anonymous identity for this request.");
   }
   return { "X-Anonymous-Id": getOrCreateAnonymousId() };
 }

@@ -8,6 +8,3 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
-    envVars:
-      - key: VITE_CLERK_PUBLISHABLE_KEY
-        value: pk_test_YXdhaXRlZC1oYWdmaXNoLTgwMDMuY2xlcmsuYWNjb3VudHMuZGV2JA
