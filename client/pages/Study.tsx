@@ -32,7 +32,7 @@ const ASSESSMENT_SESSION_LENGTH = 5;
 
 
 const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "upload" | "learning" | "assessment" | "tutor") => void, navigate: (path: string | number) => void }) => {
-  const { isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const [currentState, setCurrentState] = useState<AssessmentState>('welcome');
   const [question, setQuestion] = useState<string>('');
   const [userAnswer, setUserAnswer] = useState<string>('');
@@ -71,6 +71,11 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
   const [correctCount, setCorrectCount] = useState(0);
 
   useEffect(() => {
+    // Waits for Clerk to finish loading (see StudyPage's getAuthHeaders for
+    // the full explanation) before resolving an identity - otherwise a
+    // signed-in user's file list can be briefly queried under the wrong
+    // (anonymous) id right after the sign-in redirect.
+    if (!isLoaded) return;
     let cancelled = false;
     getTutorAuthHeaders(!!isSignedIn, getToken).then((headers) => apiService.getFiles(headers)).then((files) => {
       if (cancelled) return;
@@ -81,7 +86,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
       // just fall back to the backend's own most-recent-upload default.
     });
     return () => { cancelled = true; };
-  }, [isSignedIn, getToken]);
+  }, [isLoaded, isSignedIn, getToken]);
 
   // Parse MCQ text
   const parseMCQ = (text: string) => {
@@ -1180,14 +1185,43 @@ function UploadTab({
 export function StudyPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
+  // Always-current refs (not the closed-over isLoaded/isSignedIn from
+  // whichever render created getAuthHeaders) so the wait loop below sees
+  // isLoaded flip to true the instant it happens, from any call site.
+  const isLoadedRef = useRef(isLoaded);
+  const isSignedInRef = useRef(isSignedIn);
+  useEffect(() => {
+    isLoadedRef.current = isLoaded;
+    isSignedInRef.current = isSignedIn;
+  }, [isLoaded, isSignedIn]);
   // Identifies whoever is uploading/listing files (Clerk user or anonymous
   // guest id) so one student's documents are never shown to another - see
   // /api/upload and /api/files in test_groq.py.
-  const getAuthHeaders = useCallback(
-    () => getTutorAuthHeaders(!!isSignedIn, getToken),
-    [isSignedIn, getToken],
-  );
+  //
+  // Waits for Clerk to finish loading before resolving an identity. Without
+  // this, a signed-in user who uploads during the brief window right after
+  // the sign-in redirect (before Clerk's SDK has finished initializing)
+  // gets silently tagged as an anonymous guest - useAuth()'s isSignedIn
+  // reads as false/undefined until isLoaded flips true, so the upload is
+  // written under a throwaway anon:<uuid> owner_id. By the time the AI
+  // Tutor tab loads its file list moments later, Clerk HAS finished
+  // loading and correctly uses the real signed-in user id - a different
+  // owner_id than the upload used, so the file is invisible and "Which
+  // document do you want to learn?" shows even though an upload just
+  // succeeded. Confirmed as a production-only symptom: this window is
+  // close to instant on localhost (no real network round-trip to Clerk's
+  // servers) but large enough to matter once there's real network latency,
+  // which is exactly the "works locally, breaks once deployed" pattern
+  // reported. 5s cap is a safety net, not the expected wait - Clerk
+  // normally finishes loading in well under a second.
+  const getAuthHeaders = useCallback(async () => {
+    const start = Date.now();
+    while (!isLoadedRef.current && Date.now() - start < 5000) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return getTutorAuthHeaders(!!isSignedInRef.current, getToken);
+  }, [getToken]);
   const [activeTab, setActiveTab] = useState<"upload" | "learning" | "assessment" | "tutor">("upload");
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
