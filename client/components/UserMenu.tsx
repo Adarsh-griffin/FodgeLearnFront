@@ -3,6 +3,7 @@ import { useAuth, useUser, useClerk } from "@clerk/react";
 import { LogOut, Trash2 } from "lucide-react";
 import { apiService } from "@/lib/api";
 import { getTutorAuthHeaders } from "@/lib/identity";
+import { useToast } from "@/lib/ToastContext";
 
 /**
  * The avatar circle in the top header - previously a static "A" with no
@@ -11,6 +12,7 @@ import { getTutorAuthHeaders } from "@/lib/identity";
  * progress short of asking a developer to delete it from MongoDB by hand.
  */
 export function UserMenu() {
+  const { showToast } = useToast();
   const { isSignedIn, isLoaded, getToken } = useAuth();
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -58,10 +60,13 @@ export function UserMenu() {
     try {
       const headers = await getTutorAuthHeaders(!!isSignedIn, getToken);
       await apiService.deleteTutorProfile(headers);
-      window.alert("Your AI Tutor progress has been deleted.");
-      window.location.reload();
+      showToast("Your AI Tutor progress has been deleted.", "success");
+      // Brief delay so the toast is actually visible before the reload
+      // wipes the DOM - window.alert() used to block here, which had the
+      // same effect by accident; this is the non-blocking equivalent.
+      setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : "Failed to delete profile.");
+      showToast(err instanceof Error ? err.message : "Failed to delete profile.", "error");
     } finally {
       setIsDeleting(false);
       setIsOpen(false);

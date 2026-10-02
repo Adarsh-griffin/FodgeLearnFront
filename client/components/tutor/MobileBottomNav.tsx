@@ -49,7 +49,7 @@ export function MobileBottomNav({
               handleTabChange("tutor");
               onOpenTutorSheet();
             }}
-            className="w-13 h-13 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all ring-4 ring-white"
+            className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all ring-4 ring-white"
             title="AI Tutor Assistant"
           >
             <Sparkles className="w-6 h-6 fill-current text-white" />

@@ -131,7 +131,7 @@ export function Home() {
         {/* Application UI Preview */}
         <div className="bg-secondary rounded-2xl p-4 sm:p-6 mb-16 sm:mb-24">
           <img
-            src="/how it works image/main.png"
+            src={encodeURI("/how it works image/main.png")}
             alt="LearnForge main interface"
             className="w-full h-auto rounded-xl shadow-premium"
           />
@@ -188,7 +188,7 @@ export function Home() {
 
                 <div className="flex-1 order-3 md:order-none w-full">
                   <div className="rounded-xl overflow-hidden shadow-premium">
-                    <img src={item.image} alt={item.alt} className="w-full h-auto" />
+                    <img src={encodeURI(item.image)} alt={item.alt} className="w-full h-auto" />
                   </div>
                 </div>
               </div>

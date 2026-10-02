@@ -1,6 +1,7 @@
 import "./global.css";
 
 import { createRoot } from "react-dom/client";
+import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { ClerkProvider } from "@clerk/react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -8,9 +9,15 @@ import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { AuthGateModal } from "@/components/AuthGateModal";
 import { AuthGateProvider, useAuthGate } from "@/lib/AuthGateContext";
+import { ToastProvider } from "@/lib/ToastContext";
 import { Home } from "./pages/Home";
-import { StudyPage } from "./pages/Study";
 import NotFound from "./pages/NotFound";
+
+// Lazy-loaded: /study (and everything it imports - KaTeX, react-markdown,
+// the whole AI Tutor tree) is a genuinely heavy subtree that the homepage
+// never needs. Statically importing it used to mean every homepage visitor
+// downloaded that code too, even if they never sign up.
+const StudyPage = lazy(() => import("./pages/Study").then((m) => ({ default: m.StudyPage })));
 
 // ClerkProvider reads VITE_CLERK_PUBLISHABLE_KEY from the env automatically.
 // Only the AI Tutor tab actually requires a signed-in user; every other
@@ -63,13 +70,28 @@ const App = () => {
     <ErrorBoundary>
       <BrowserRouter>
         <ClerkProviderWithRoutes>
-          <AuthGateProvider>
-            <Routes>
-              <Route path="/" element={<HomeRoute />} />
-              <Route path="/study" element={<StudyPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthGateProvider>
+          <ToastProvider>
+            <AuthGateProvider>
+              <Routes>
+                <Route path="/" element={<HomeRoute />} />
+                <Route
+                  path="/study"
+                  element={
+                    <Suspense
+                      fallback={
+                        <div className="flex items-center justify-center min-h-screen">
+                          <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                        </div>
+                      }
+                    >
+                      <StudyPage />
+                    </Suspense>
+                  }
+                />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AuthGateProvider>
+          </ToastProvider>
         </ClerkProviderWithRoutes>
       </BrowserRouter>
     </ErrorBoundary>

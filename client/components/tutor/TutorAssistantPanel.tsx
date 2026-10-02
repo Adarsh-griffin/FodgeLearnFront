@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { apiService, StudyPlan, masteryBandClient } from "@/lib/api";
 import { BAND_STYLES } from "./RoadmapView";
+import { useToast } from "@/lib/ToastContext";
 import { ChatMarkdown } from "./ChatMarkdown";
 import { useLiveSpeechPreview } from "@/hooks/useLiveSpeechPreview";
 
@@ -49,6 +50,7 @@ export function TutorAssistantPanel({
   currentTopicTitle,
   currentExplanation,
 }: TutorAssistantPanelProps) {
+  const { showToast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -167,7 +169,7 @@ export function TutorAssistantPanel({
       setIsRecording(true);
       liveSpeechPreview.start();
     } catch {
-      alert("Could not access microphone.");
+      showToast("Could not access microphone.", "error");
     }
   };
 
@@ -184,7 +186,7 @@ export function TutorAssistantPanel({
   })();
 
   return (
-    <aside className="hidden lg:flex w-80 lg:w-80 xl:w-[340px] flex-shrink-0 border-l border-slate-200/80 bg-white flex-col h-full overflow-y-auto hide-scrollbar select-none">
+    <aside className="hidden lg:flex w-80 lg:w-80 xl:w-[340px] flex-shrink-0 border-l border-slate-200/80 bg-white flex-col h-full min-h-0 overflow-y-auto hide-scrollbar select-none">
       {/* Top Header */}
       <div className="p-3.5 px-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -283,7 +285,7 @@ export function TutorAssistantPanel({
         </div>
 
         {/* CHATBOT MESSAGES OUTPUT AREA BELOW SEARCH BAR */}
-        <div className="flex-1 overflow-y-auto hide-scrollbar space-y-2.5 min-h-[140px] text-xs">
+        <div className="space-y-2.5 min-h-[140px] text-xs">
           {messages.length === 0 ? (
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-center space-y-1">
               <p className="text-xs font-semibold text-slate-700">

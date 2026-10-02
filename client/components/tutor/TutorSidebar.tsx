@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Home,
   BookOpen,
@@ -7,9 +8,13 @@ import {
   CheckCircle2,
   Circle,
   FileCheck,
-  RotateCcw
+  RotateCcw,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react";
 import { StudyPlan } from "@/lib/api";
+
+const COLLAPSED_STORAGE_KEY = "learnforge_sidebar_collapsed";
 
 interface TutorSidebarProps {
   activeTab: "upload" | "learning" | "assessment" | "tutor";
@@ -31,6 +36,25 @@ export function TutorSidebar({
   currentTopicId,
   onChangeDocument,
 }: TutorSidebarProps) {
+  // Persisted per-browser so collapsing it once sticks across page/tab
+  // switches (Upload/AI Tutor/Summary/Assessments all render this same
+  // sidebar) instead of resetting back open every navigation.
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(COLLAPSED_STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLLAPSED_STORAGE_KEY, String(isCollapsed));
+    } catch {
+      // ignore - collapse state just won't persist across reloads
+    }
+  }, [isCollapsed]);
+
   const navItems = [
     { id: "home", label: "Home", icon: Home, action: () => navigate("/") },
     { id: "upload", label: "Upload", icon: Upload, action: () => handleTabChange("upload") },
@@ -51,14 +75,25 @@ export function TutorSidebar({
     : fileName;
 
   return (
-    <aside className="hidden lg:flex w-56 sm:w-64 flex-shrink-0 bg-white border-r border-slate-200/80 flex-col h-full overflow-y-auto hide-scrollbar select-none">
-      {/* Brand Header */}
-      <div className="p-4 sm:p-5 pb-3 flex items-center justify-between">
-        <button 
-          onClick={() => navigate("/")} 
-          className="flex items-center gap-2 text-left hover:opacity-90 transition-opacity"
+    <aside
+      className={`hidden lg:flex ${isCollapsed ? "w-16" : "w-56 sm:w-64"} flex-shrink-0 bg-white border-r border-slate-200/80 flex-col h-full overflow-y-auto hide-scrollbar select-none transition-[width] duration-200`}
+    >
+      {/* Brand Header + Collapse Toggle */}
+      <div className={`p-4 sm:p-5 pb-3 flex items-center ${isCollapsed ? "justify-center" : "justify-between"}`}>
+        {!isCollapsed && (
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2 text-left hover:opacity-90 transition-opacity min-w-0"
+          >
+            <img src="/navbarlogo.png" alt="LearnForge" className="h-7 w-auto object-contain" />
+          </button>
+        )}
+        <button
+          onClick={() => setIsCollapsed((v) => !v)}
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-50 transition-colors flex-shrink-0"
         >
-          <img src="/navbarlogo.png" alt="LearnForge" className="h-7 w-auto object-contain" />
+          {isCollapsed ? <PanelLeftOpen className="w-4.5 h-4.5" /> : <PanelLeftClose className="w-4.5 h-4.5" />}
         </button>
       </div>
 
@@ -71,19 +106,22 @@ export function TutorSidebar({
             <button
               key={item.id}
               onClick={item.action}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              title={isCollapsed ? item.label : undefined}
+              className={`w-full flex items-center ${isCollapsed ? "justify-center" : "gap-3"} px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 isActive
                   ? "bg-primary/10 text-primary font-semibold shadow-xs"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? "text-primary" : "text-slate-400"}`} />
-              <span>{item.label}</span>
+              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-primary" : "text-slate-400"}`} />
+              {!isCollapsed && <span>{item.label}</span>}
             </button>
           );
         })}
       </div>
 
+      {isCollapsed ? null : (
+        <>
       <div className="my-3 mx-4 border-t border-slate-150" />
 
       {/* Current Document / Topic Card - only when there's a real file to
@@ -164,6 +202,8 @@ export function TutorSidebar({
             })}
           </div>
         </div>
+      )}
+        </>
       )}
     </aside>
   );

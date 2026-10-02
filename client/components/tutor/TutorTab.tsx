@@ -169,16 +169,16 @@ export function TutorTab({ handleTabChange, navigate }: TutorTabProps) {
           plan={plan}
           onChangeDocument={handleChangeDocument}
         />
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-4 sm:p-8 text-center overflow-y-auto">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
+        <div className="flex-1 min-h-0 flex flex-col items-center gap-4 p-4 sm:p-8 text-center overflow-y-auto hide-scrollbar">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Which document do you want to learn?</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex-shrink-0">Which document do you want to learn?</h2>
           {filesError && <p className="text-sm text-rose-600">{filesError}</p>}
           {files.length === 0 && !filesError ? (
             <p className="text-sm text-slate-500">Upload a document first from the Upload tab.</p>
           ) : (
-            <div className="w-full max-w-md space-y-2">
+            <div className="w-full max-w-4xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pb-4">
               {files.map((f) => (
                 <button
                   key={f._id}

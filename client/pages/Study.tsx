@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+﻿import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Upload, CheckCircle, BookOpen, FileText, RotateCcw, Home, XCircle, Eye, EyeOff, Sparkles, GraduationCap, HelpCircle, BarChart3, ArrowRight, Lightbulb, Library, UploadCloud, Presentation, FileType, Search, Send, Mic, Square } from "lucide-react";
 import { TutorTab } from "@/components/tutor/TutorTab";
@@ -8,7 +8,8 @@ import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
 import { MobileUploadView } from "@/components/tutor/MobileUploadView";
 import { MobileBottomNav } from "@/components/tutor/MobileBottomNav";
 import { MobileTutorSheet } from "@/components/tutor/MobileTutorSheet";
-import { apiService, UploadResponse, ReferenceLink, ProcessingStatus, AssessmentQuestion, AssessmentFeedback } from "@/lib/api";
+import { apiService, UploadResponse, ReferenceLink, ProcessingStatus, AssessmentQuestion, AssessmentFeedback, FileInfo } from "@/lib/api";
+import { useToast } from "@/lib/ToastContext";
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
@@ -18,7 +19,12 @@ import 'katex/dist/katex.min.css';
 import { AILearningLoader } from "@/components/ui/AILearningLoader";
 
 
-type AssessmentState = 'welcome' | 'question' | 'answer' | 'feedback';
+type AssessmentState = 'welcome' | 'question' | 'answer' | 'feedback' | 'complete';
+
+// How many questions make up one assessment session before showing a
+// completion screen - previously there was no defined end at all, so the
+// session just generated questions forever with no sense of progress.
+const ASSESSMENT_SESSION_LENGTH = 5;
 
 
 
@@ -45,13 +51,50 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
   const [generatingType, setGeneratingType] = useState<'theoretical' | 'mcq' | null>(null); // Track which button is loading
   const [error, setError] = useState<string>('');
 
+  // Which document questions are generated from - defaults to the most
+  // recently uploaded (matches the backend's own fallback) but is now
+  // explicit and changeable, instead of always silently being whichever
+  // document happens to be newest regardless of what the student is
+  // actually studying.
+  const [availableFiles, setAvailableFiles] = useState<FileInfo[]>([]);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+
+  // Session progress - a defined number of questions with a visible
+  // "Question X of N" counter and a completion screen at the end, instead
+  // of generating questions indefinitely with no sense of progress or end.
+  const [questionNumber, setQuestionNumber] = useState(1);
+  const [sessionType, setSessionType] = useState<'theoretical' | 'mcq' | null>(null);
+  const [correctCount, setCorrectCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiService.getFiles().then((files) => {
+      if (cancelled) return;
+      setAvailableFiles(files);
+      if (files.length > 0) setSelectedFileName((prev) => prev ?? files[0].originalName);
+    }).catch(() => {
+      // No files yet (or request failed) - generateAssessment/submitAssessment
+      // just fall back to the backend's own most-recent-upload default.
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   // Parse MCQ text
   const parseMCQ = (text: string) => {
     try {
       // Regex to allow optional "Question:" prefix and be case-insensitive/flexible
       const questionMatch = text.match(/^(?:Question:\s*)?(.*?)(?=\s*A\))/si);
       const optionsMatch = text.match(/A\)\s*(.*?)\s*B\)\s*(.*?)\s*C\)\s*(.*?)\s*D\)\s*(.*?)(?=\s*(?:Correct Answer:|Answer:))/si);
-      const correctMatch = text.match(/(?:Correct Answer:|Answer:)\s*(.*?)(?=\s*Explanation:)/si);
+      // Extracts ONLY the option letter (A-D), tolerating markdown bold
+      // markers around "Correct Answer:"/the letter itself (e.g.
+      // "**Correct Answer:** B"). The previous regex captured everything
+      // up to "Explanation:" lazily, but its `\s*Explanation:` lookahead
+      // can't skip over "**" (not whitespace) when the LLM bolds that
+      // label too, so the capture swallowed stray "**"/newlines along with
+      // the letter (e.g. "** B\n\n**" instead of "B") - grading only
+      // happened to still work via a loose .includes() fallback below, not
+      // because this was actually fixed.
+      const correctMatch = text.match(/(?:Correct Answer|Answer)\s*:?\**\s*\**\s*([A-D])\b/i);
       const explanationMatch = text.match(/Explanation:\s*(.*?)(?=\s*Hint:|$)/si);
       const hintMatch = text.match(/Hint:\s*(.*)/si);
 
@@ -77,6 +120,19 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
     }
   };
 
+  // Shared with the Feedback state's render (previously duplicated inline
+  // there) so submitAnswer() can also use it to score theoretical sessions.
+  const getFeedbackStatus = (text: string): 'correct' | 'partial' | 'incorrect' => {
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes('status: incorrect') || lowerText.includes('status**: incorrect') || lowerText.includes('status:** incorrect')) return 'incorrect';
+    if (lowerText.includes('status: partially correct') || lowerText.includes('status**: partially correct')) return 'partial';
+    if (lowerText.includes('status: correct') || lowerText.includes('status**: correct')) return 'correct';
+    if (lowerText.includes('incorrect')) return 'incorrect';
+    if (lowerText.includes('partially correct')) return 'partial';
+    if (lowerText.includes('correct')) return 'correct';
+    return 'correct';
+  };
+
   const generateQuestion = async (type: 'theoretical' | 'mcq') => {
     setGeneratingType(type);
     setError('');
@@ -86,9 +142,11 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
     setShowHint(false);
     setIsCorrect(null);
     setShowExplanation(false);
+    setUserAnswer('');
+    setFeedback('');
 
     try {
-      const response: AssessmentQuestion = await apiService.generateAssessment(type);
+      const response: AssessmentQuestion = await apiService.generateAssessment(type, selectedFileName);
 
       if (type === 'mcq') {
         const parsed = parseMCQ(response.question);
@@ -111,6 +169,28 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
     }
   };
 
+  // Starts a brand-new N-question session (called from the welcome screen).
+  const startSession = (type: 'theoretical' | 'mcq') => {
+    setSessionType(type);
+    setQuestionNumber(1);
+    setCorrectCount(0);
+    generateQuestion(type);
+  };
+
+  // Advances within the CURRENT session - previously there was no concept
+  // of "next question in this session" at all, so a session either ended
+  // after one question or looped the same question type forever with no
+  // defined stopping point.
+  const goToNextQuestion = () => {
+    if (!sessionType) return;
+    if (questionNumber >= ASSESSMENT_SESSION_LENGTH) {
+      setCurrentState('complete');
+      return;
+    }
+    setQuestionNumber((n) => n + 1);
+    generateQuestion(sessionType);
+  };
+
   const submitAnswer = async () => {
     if (!userAnswer.trim()) {
       setError('Please enter an answer before submitting');
@@ -120,8 +200,11 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
     setIsLoading(true);
     setError('');
     try {
-      const response: AssessmentFeedback = await apiService.submitAssessment(question, userAnswer);
+      const response: AssessmentFeedback = await apiService.submitAssessment(question, userAnswer, selectedFileName);
       setFeedback(response.feedback);
+      if (getFeedbackStatus(response.feedback) === 'correct') {
+        setCorrectCount((c) => c + 1);
+      }
       setCurrentState('feedback');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit answer');
@@ -130,11 +213,20 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
     }
   };
 
+  // Full reset back to the welcome/type-choice screen - this is the
+  // explicit "back" path available from every state, not just reachable by
+  // accident via a misleadingly-labeled "New Question" button.
   const resetAssessment = () => {
     setQuestion('');
     setUserAnswer('');
     setFeedback('');
     setError('');
+    setMcqData(null);
+    setSelectedOption(null);
+    setIsCorrect(null);
+    setSessionType(null);
+    setQuestionNumber(1);
+    setCorrectCount(0);
     setCurrentState('welcome');
   };
 
@@ -151,7 +243,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
           activeTab="assessment"
           handleTabChange={handleTabChange}
           navigate={navigate}
-          fileName={null}
+          fileName={selectedFileName}
         />
 
         <div className="flex-1 overflow-y-auto min-h-0 hide-scrollbar flex flex-col">
@@ -173,34 +265,6 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                 {/* Background Ambient Blur Blobs */}
                 <div className="absolute -left-20 -top-20 w-[500px] h-[500px] bg-purple-200/40 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute -right-20 -bottom-20 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-3xl pointer-events-none" />
-
-                {/* 3D Floating Element 1: Top-Left Document Card with Orbit Ring */}
-                <div className="absolute top-12 left-8 sm:top-16 sm:left-16 z-0 animate-ai-float pointer-events-none hidden sm:block">
-                  <div className="relative">
-                    {/* Orbit Ring */}
-                    <div className="absolute -inset-4 rounded-full border border-indigo-300/50 rotate-45 pointer-events-none" />
-                    {/* Floating Document Card */}
-                    <div className="w-20 h-24 bg-white/90 backdrop-blur-md rounded-2xl border border-indigo-200/80 shadow-lg p-3 flex flex-col justify-center gap-2 rotate-[-10deg]">
-                      <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
-                        <FileText className="w-4 h-4" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="w-full h-1 bg-indigo-200 rounded-full" />
-                        <div className="w-3/4 h-1 bg-indigo-200 rounded-full" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3D Floating Element 2: Bottom-Right Orb with Orbit Ring */}
-                <div className="absolute bottom-12 right-10 sm:bottom-20 sm:right-20 z-0 animate-ai-sparkle-1 pointer-events-none hidden sm:block">
-                  <div className="relative">
-                    <div className="absolute -inset-5 rounded-full border border-purple-300/50 -rotate-30 pointer-events-none" />
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-400 shadow-xl shadow-purple-500/30 flex items-center justify-center">
-                      <Sparkles className="w-6 h-6 text-white animate-pulse" />
-                    </div>
-                  </div>
-                </div>
 
                 {/* Center Elevated Main Assessment Card */}
                 <div className="relative z-10 bg-white/95 backdrop-blur-md rounded-[2.5rem] p-8 sm:p-14 lg:p-16 shadow-2xl shadow-indigo-100/90 border border-slate-200/80 max-w-3xl lg:max-w-4xl w-full text-center space-y-6 sm:space-y-8">
@@ -229,7 +293,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto pt-2">
                     {/* Theoretical Question Button */}
                     <button
-                      onClick={() => generateQuestion('theoretical')}
+                      onClick={() => startSession('theoretical')}
                       disabled={generatingType !== null}
                       className="px-6 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2.5 cursor-pointer"
                     >
@@ -249,7 +313,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
 
                     {/* MCQ Question Button */}
                     <button
-                      onClick={() => generateQuestion('mcq')}
+                      onClick={() => startSession('mcq')}
                       disabled={generatingType !== null}
                       className="px-6 py-4 bg-white hover:bg-slate-50 text-indigo-600 border-2 border-indigo-200 hover:border-indigo-400 font-bold text-sm sm:text-base rounded-2xl shadow-2xs hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2.5 cursor-pointer"
                     >
@@ -268,10 +332,30 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                     </button>
                   </div>
 
-                  {/* Footer Info Note */}
-                  <div className="pt-2 flex items-center justify-center gap-1.5 text-xs text-slate-400 font-medium">
-                    <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Questions are generated from your most recently uploaded document</span>
+                  {/* Document Selector - questions used to always silently
+                      come from whatever was uploaded most recently,
+                      regardless of what the student was actually studying.
+                      Now explicit and changeable when there's more than one. */}
+                  <div className="pt-2 flex items-center justify-center gap-1.5 text-xs text-slate-500 font-medium flex-wrap">
+                    <HelpCircle className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    {availableFiles.length > 1 ? (
+                      <span className="flex items-center gap-1.5">
+                        Generating from:
+                        <select
+                          value={selectedFileName ?? ''}
+                          onChange={(e) => setSelectedFileName(e.target.value)}
+                          className="font-bold text-indigo-600 bg-transparent border-b border-indigo-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                        >
+                          {availableFiles.map((f) => (
+                            <option key={f._id} value={f.originalName}>{f.originalName}</option>
+                          ))}
+                        </select>
+                      </span>
+                    ) : (
+                      <span>
+                        Generating from: <span className="font-bold text-slate-600">{selectedFileName || 'your most recently uploaded document'}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -312,11 +396,24 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                     {currentState === 'question' && (
                       <div className="bg-white rounded-xl shadow-lg p-8">
                         <div className="mb-6">
-                          <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
-                              1
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
+                                1
+                              </div>
+                              <h2 className="text-xl font-semibold text-gray-800">Generated Question</h2>
+                              {sessionType && (
+                                <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full ml-1">
+                                  Question {questionNumber} of {ASSESSMENT_SESSION_LENGTH}
+                                </span>
+                              )}
                             </div>
-                            <h2 className="text-xl font-semibold text-gray-800">Generated Question</h2>
+                            <button
+                              onClick={resetAssessment}
+                              className="text-xs font-semibold text-gray-500 hover:text-primary transition-colors"
+                            >
+                              ← Back to options
+                            </button>
                           </div>
 
                           <div className="bg-gray-50 rounded-lg p-6 border-l-4 border-primary">
@@ -329,8 +426,23 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                             </div>
                           </div>
 
-                          {/* MCQ Logic */}
-                          {mcqData ? (
+                          {/* MCQ Logic - branches on sessionType (not mcqData)
+                              so that while a NEW mcq question is being
+                              fetched (mcqData is briefly null between
+                              generateQuestion's reset and the response
+                              arriving), this still renders the MCQ loading
+                              skeleton instead of flashing the unrelated
+                              theoretical "Start Answering" buttons. */}
+                          {sessionType === 'mcq' ? (
+                            !mcqData ? (
+                              <div className="mt-6 space-y-4 animate-pulse">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {[0, 1, 2, 3].map((i) => (
+                                    <div key={i} className="p-4 rounded-xl border-2 border-border h-[72px] bg-muted/40" />
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
                             <div className="mt-6 space-y-4">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {mcqData.options.map((opt) => (
@@ -408,23 +520,24 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
 
                               <div className="mt-4 flex justify-end">
                                 <button
-                                  onClick={() => generateQuestion('mcq')}
-                                  disabled={generatingType === 'mcq'}
-                                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2"
+                                  onClick={goToNextQuestion}
+                                  disabled={generatingType === 'mcq' || !selectedOption}
+                                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {generatingType === 'mcq' ? (
                                     <div className="w-5 h-5 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
                                   ) : (
                                     <RotateCcw size={20} />
                                   )}
-                                  New Question
+                                  {questionNumber >= ASSESSMENT_SESSION_LENGTH ? 'Finish Session' : 'Next Question'}
                                 </button>
                               </div>
 
                             </div>
+                            )
                           ) : (
                             // Standard Theoretical UI Buttons
-                            <div className="flex gap-4">
+                            <div className="flex flex-wrap gap-3">
                               <button
                                 onClick={startAnswering}
                                 className="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
@@ -433,11 +546,12 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                                 Start Answering
                               </button>
                               <button
-                                onClick={resetAssessment}
-                                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2"
+                                onClick={goToNextQuestion}
+                                disabled={generatingType === 'theoretical'}
+                                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50"
                               >
                                 <RotateCcw size={20} />
-                                New Question
+                                Skip to Next Question
                               </button>
                             </div>
                           )}
@@ -450,11 +564,24 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                     {currentState === 'answer' && (
                       <div className="bg-white rounded-xl shadow-lg p-8">
                         <div className="mb-6">
-                          <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
-                              2
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
+                                2
+                              </div>
+                              <h2 className="text-xl font-semibold text-gray-800">Your Answer</h2>
+                              {sessionType && (
+                                <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full ml-1">
+                                  Question {questionNumber} of {ASSESSMENT_SESSION_LENGTH}
+                                </span>
+                              )}
                             </div>
-                            <h2 className="text-xl font-semibold text-gray-800">Your Answer</h2>
+                            <button
+                              onClick={resetAssessment}
+                              className="text-xs font-semibold text-gray-500 hover:text-primary transition-colors"
+                            >
+                              ← Back to options
+                            </button>
                           </div>
 
                           <div className="bg-gray-50 rounded-lg p-4 mb-6 border-l-4 border-primary">
@@ -482,7 +609,7 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                           </div>
                         </div>
 
-                        <div className="flex gap-4">
+                        <div className="flex flex-wrap gap-3">
                           <button
                             onClick={submitAnswer}
                             disabled={isLoading || !userAnswer.trim()}
@@ -552,11 +679,24 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                       return (
                         <div className="bg-white rounded-xl shadow-lg p-8">
                           <div className="mb-6">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className={`w-8 h-8 ${status === 'incorrect' ? 'bg-destructive' : 'bg-success'} text-white rounded-full flex items-center justify-center font-bold`}>
-                                3
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-8 h-8 ${status === 'incorrect' ? 'bg-destructive' : 'bg-success'} text-white rounded-full flex items-center justify-center font-bold`}>
+                                  3
+                                </div>
+                                <h2 className="text-xl font-semibold text-gray-800">Assessment Feedback</h2>
+                                {sessionType && (
+                                  <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full ml-1">
+                                    Question {questionNumber} of {ASSESSMENT_SESSION_LENGTH}
+                                  </span>
+                                )}
                               </div>
-                              <h2 className="text-xl font-semibold text-gray-800">Assessment Feedback</h2>
+                              <button
+                                onClick={resetAssessment}
+                                className="text-xs font-semibold text-gray-500 hover:text-primary transition-colors"
+                              >
+                                ← Back to options
+                              </button>
                             </div>
 
                             <div className="bg-gray-50 rounded-lg p-4 mb-6 border-l-4 border-primary">
@@ -587,13 +727,13 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                             </div>
                           </div>
 
-                          <div className="flex gap-4">
+                          <div className="flex flex-wrap gap-3">
                             <button
-                              onClick={resetAssessment}
+                              onClick={goToNextQuestion}
                               className="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
                             >
-                              <RotateCcw size={20} />
-                              New Assessment
+                              <ArrowRight size={20} />
+                              {questionNumber >= ASSESSMENT_SESSION_LENGTH ? 'Finish Session' : 'Next Question'}
                             </button>
                             <button
                               onClick={() => setCurrentState('answer')}
@@ -605,6 +745,41 @@ const AssessmentTab = ({ handleTabChange, navigate }: { handleTabChange: (tab: "
                         </div>
                       );
                     })()}
+
+                    {/* Complete State - the session previously had no
+                        defined end: it would just generate another question
+                        forever with no progress indicator or finish line. */}
+                    {currentState === 'complete' && (
+                      <div className="bg-white rounded-xl shadow-lg p-8 text-center space-y-6">
+                        <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto">
+                          <CheckCircle size={32} className="text-success" />
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-bold text-gray-800 mb-2">Session Complete!</h2>
+                          <p className="text-gray-500">
+                            You answered <span className="font-bold text-gray-800">{correctCount}</span> out of{' '}
+                            <span className="font-bold text-gray-800">{ASSESSMENT_SESSION_LENGTH}</span> questions correctly.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-4 justify-center">
+                          {sessionType && (
+                            <button
+                              onClick={() => startSession(sessionType)}
+                              className="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
+                            >
+                              <RotateCcw size={20} />
+                              New Session, Same Type
+                            </button>
+                          )}
+                          <button
+                            onClick={resetAssessment}
+                            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                          >
+                            ← Back to Options
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </>
                 );
               })()
@@ -678,8 +853,328 @@ function TopicInputForm({
   );
 }
 
+/**
+ * Previously defined INLINE inside StudyPage (`const UploadTab = () => (...)`),
+ * same bug class as TopicInputForm's old comment describes: StudyPage
+ * re-rendering (e.g. every tick of the upload-progress polling interval)
+ * redefined this function's identity, so React treated <UploadTab /> as a
+ * brand-new component type and unmounted+remounted the whole subtree on
+ * every tick - which reset scroll position to the top every few seconds
+ * while a document was uploading/processing, exactly when a user is most
+ * likely to be scrolled down watching progress. Hoisting it to module
+ * scope (matching MobileUploadView, which already gets explicit props)
+ * fixes that by construction: the component type is now stable across
+ * StudyPage re-renders.
+ */
+function UploadTab({
+  handleDragOver,
+  handleDragLeave,
+  handleDrop,
+  isDragging,
+  fileInputRef,
+  handleFileSelect,
+  handleTopicNameSubmit,
+  isSubmittingTopic,
+  handleTabChange,
+  files,
+  uploadProgress,
+  processingStatus,
+  successMessages,
+  removeFile,
+  navigate,
+  uploadedFilesRef,
+}: {
+  handleDragOver: (e: React.DragEvent) => void;
+  handleDragLeave: (e: React.DragEvent) => void;
+  handleDrop: (e: React.DragEvent) => void;
+  isDragging: boolean;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleTopicNameSubmit: (topicName: string) => void;
+  isSubmittingTopic: boolean;
+  handleTabChange: (tab: "upload" | "learning" | "assessment" | "tutor") => void;
+  files: File[];
+  uploadProgress: Record<string, number>;
+  processingStatus: Record<string, any>;
+  successMessages: Record<string, boolean>;
+  removeFile: (fileName: string) => void;
+  navigate: (path: string | number) => void;
+  uploadedFilesRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  return (
+    <div className="h-full w-full flex flex-col">
+      {/* Mobile Upload Composition (< lg) */}
+      <div className="lg:hidden flex-1 flex min-h-0 w-full">
+        <MobileUploadView
+          handleDragOver={handleDragOver}
+          handleDragLeave={handleDragLeave}
+          handleDrop={handleDrop}
+          isDragging={isDragging}
+          fileInputRef={fileInputRef}
+          handleFileSelect={handleFileSelect}
+          handleTopicNameSubmit={handleTopicNameSubmit}
+          isSubmittingTopic={isSubmittingTopic}
+          handleTabChange={handleTabChange}
+          files={files}
+          uploadProgress={uploadProgress}
+          processingStatus={processingStatus}
+          successMessages={successMessages}
+          removeFile={removeFile}
+        />
+      </div>
+
+      {/* Desktop Upload Composition (>= lg) */}
+      <div className="hidden lg:flex flex-1 min-h-0 w-full bg-[#FAFAFC]">
+        <TutorSidebar
+          activeTab="upload"
+          handleTabChange={handleTabChange}
+          navigate={navigate}
+          fileName={null}
+        />
+
+        <div className="flex-1 min-h-0 overflow-y-auto p-10">
+          <div className="max-w-3xl mx-auto">
+            <h1 className="text-2xl font-bold text-slate-900 mb-1">Upload Documents</h1>
+            <p className="text-sm text-slate-500 mb-8">
+              Upload your study material and let LearnForge turn it into a personalized learning experience.
+            </p>
+
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-14 text-center transition-colors ${isDragging
+                ? "border-primary bg-primary/5"
+                : "border-border hover:border-primary/40 bg-secondary/30"
+                }`}
+            >
+              {/* Decorative floating file-type chips */}
+              <div className="hidden sm:flex absolute top-8 left-10 w-11 h-11 rounded-xl bg-white shadow-md border border-rose-100 items-center justify-center -rotate-6">
+                <FileText className="w-5 h-5 text-rose-500" />
+              </div>
+              <div className="hidden sm:flex absolute bottom-10 left-20 w-11 h-11 rounded-xl bg-white shadow-md border border-blue-100 items-center justify-center rotate-6">
+                <FileType className="w-5 h-5 text-blue-500" />
+              </div>
+              <div className="hidden sm:flex absolute top-10 right-12 w-11 h-11 rounded-xl bg-white shadow-md border border-amber-100 items-center justify-center rotate-6">
+                <Presentation className="w-5 h-5 text-amber-500" />
+              </div>
+              <div className="hidden sm:flex absolute bottom-8 right-20 w-11 h-11 rounded-xl bg-white shadow-md border border-primary/10 items-center justify-center -rotate-6">
+                <FileText className="w-5 h-5 text-primary" />
+              </div>
+
+              <div className="relative mb-4">
+                <div className="w-16 h-16 rounded-2xl bg-primary/80 text-primary flex items-center justify-center mx-auto">
+                  <UploadCloud className={`w-8 h-8 ${isDragging ? "text-primary" : "text-primary"}`} />
+                </div>
+              </div>
+              <h3 className="relative text-xl font-bold text-slate-900 mb-1">
+                Drop your files here
+              </h3>
+              <p className="relative text-sm text-slate-500 mb-6">
+                or click to browse from your computer
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="relative px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all inline-flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                Select Files
+              </button>
+              <p className="relative text-xs text-slate-400 mt-4">You can upload multiple files at once</p>
+            </div>
+
+            {/* Divider */}
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-[#FAFAFC] px-4 text-slate-400 font-semibold tracking-wider">
+                  OR
+                </span>
+              </div>
+            </div>
+
+            {/* Topic Input Box */}
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shadow-md flex-shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Don't have a PDF? Type a Topic Name</h3>
+                  <p className="text-xs text-slate-500">Instant AI learning module generation for any concept, subject, or question.</p>
+                </div>
+              </div>
+
+              <TopicInputForm onSubmit={handleTopicNameSubmit} isSubmitting={isSubmittingTopic} />
+            </div>
+
+            {files.length > 0 && (
+              <div className="mt-8" ref={uploadedFilesRef}>
+                <h3 className="text-lg font-semibold text-foreground mb-4">
+                  Uploaded Files ({files.length})
+                </h3>
+                <div className="space-y-4">
+                  {files.map((file) => {
+                    const progress = uploadProgress[file.name] || 0;
+                    const isUploadComplete = progress >= 100;
+                    const showSuccess = successMessages[file.name];
+                    // passmain_groq.py now marks a document "failed" instead
+                    // of leaving it indistinguishable from "still
+                    // processing" forever on a genuine ingestion error.
+                    const hasFailed = processingStatus[file.name]?.status === 'failed';
+
+                    return (
+                      <div
+                        key={file.name}
+                        className={`rounded-lg p-4 border transition-colors ${showSuccess
+                          ? "bg-green-50 border-green-200 hover:border-green-300"
+                          : hasFailed
+                          ? "bg-destructive/5 border-destructive/30 hover:border-destructive/40"
+                          : "bg-muted/30 border-border hover:border-primary/30"
+                          }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              {showSuccess ? (
+                                <CheckCircle size={20} className="text-green-600" />
+                              ) : hasFailed ? (
+                                <XCircle size={20} className="text-destructive" />
+                              ) : isUploadComplete ? (
+                                <div className="w-5 h-5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+                              ) : (
+                                <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                              )}
+                              <span className="font-medium text-foreground break-all">
+                                {file.name}
+                              </span>
+                            </div>
+
+                            {showSuccess ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
+                                  <CheckCircle size={16} />
+                                  <span>Processing completed successfully!</span>
+                                </div>
+                                <div className="text-xs text-green-600">
+                                  Your document has been analyzed and is ready for learning.
+                                </div>
+                              </div>
+                            ) : hasFailed ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-sm text-destructive font-medium">
+                                  <XCircle size={16} />
+                                  <span>Processing failed</span>
+                                </div>
+                                <div className="text-xs text-destructive/80">
+                                  {processingStatus[file.name]?.message || "Something went wrong analyzing this document. Try re-uploading it."}
+                                </div>
+                              </div>
+                            ) : isUploadComplete ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-sm text-blue-600">
+                                  <div className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+                                  <span>Processing document...</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Analyzing content and generating explanations
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                                <span>•</span>
+                                <span>{Math.round(progress)}% uploaded</span>
+                              </div>
+                            )}
+
+                            {!showSuccess && !hasFailed && (
+                              <div className="mt-2 w-full bg-muted rounded-full h-2">
+                                <div
+                                  className={`h-2 rounded-full transition-all duration-300 ${isUploadComplete ? "bg-blue-600" : "bg-primary"
+                                    }`}
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => removeFile(file.name)}
+                            className="text-muted-foreground hover:text-primary transition-colors text-sm font-medium"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {files.some((f) => successMessages[f.name]) && (
+                  <button
+                    className="mt-6 w-full py-3.5 px-6 bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-extrabold text-sm shadow-md transition-all active:scale-98 flex items-center justify-center gap-2"
+                    onClick={() => handleTabChange("tutor")}
+                  >
+                    <span>Continue to AI Tutor</span>
+                    <Sparkles className="w-4 h-4 fill-current text-amber-300" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="mt-8 rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-9 h-9 rounded-lg bg-primary/5 text-primary flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">Supported Formats</h4>
+                  <p className="text-xs text-slate-500">Upload files in the following formats. We'll analyze and structure your content automatically.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-xl bg-rose-50/60 border border-rose-100 p-4">
+                  <div className="w-9 h-9 rounded-lg bg-white text-rose-500 flex items-center justify-center shadow-xs mb-3">
+                    <FileText className="w-4.5 h-4.5" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-900">PDF files</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Best for textbooks, lecture notes</p>
+                </div>
+                <div className="rounded-xl bg-emerald-50/60 border border-emerald-100 p-4">
+                  <div className="w-9 h-9 rounded-lg bg-white text-emerald-600 flex items-center justify-center shadow-xs mb-3">
+                    <FileType className="w-4.5 h-4.5" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-900">Max 50MB per file</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Upload multiple files at once</p>
+                </div>
+                <div className="rounded-xl bg-primary/60 border border-primary/10 p-4">
+                  <div className="w-9 h-9 rounded-lg bg-white text-primary flex items-center justify-center shadow-xs mb-3">
+                    <Library className="w-4.5 h-4.5" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-900">Multiple files</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Combine related materials</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function StudyPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"upload" | "learning" | "assessment" | "tutor">("upload");
   const [files, setFiles] = useState<File[]>([]);
@@ -689,6 +1184,10 @@ export function StudyPage() {
   const [successMessages, setSuccessMessages] = useState<{ [key: string]: boolean }>({});
   const [isMobileTutorSheetOpen, setIsMobileTutorSheetOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Scrolled into view once a file/topic starts uploading so the user lands
+  // on the progress section instead of staying wherever they were (e.g. down
+  // at the topic-name box they just typed into) with no visible feedback.
+  const uploadedFilesRef = useRef<HTMLDivElement>(null);
 
   // Topic Learning State
   const [isSubmittingTopic, setIsSubmittingTopic] = useState(false);
@@ -773,6 +1272,16 @@ startxref
       localStorage.removeItem('neurolearn_links_timestamp');
     }
     setActiveTab(tab);
+    // Keep the URL in sync so refreshing the page (or sharing/bookmarking
+    // the link) lands back on the SAME tab - this used to only update React
+    // state, so the URL stayed at a bare /study no matter which tab was
+    // active, and a refresh always fell back to useState's "upload" default
+    // regardless of where the user actually was.
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tab);
+      return next;
+    }, { replace: true });
   };
 
   // Test backend connection one time on component mount
@@ -835,6 +1344,13 @@ startxref
 
     if (validFiles.length > 0) {
       setFiles((prev) => [...prev, ...validFiles]);
+      // Scroll to the progress section once it's actually in the DOM
+      // (next frame, after the state update above renders it) instead of
+      // leaving the user wherever they were - e.g. still scrolled down at
+      // the topic-name box with no visible sign anything happened.
+      requestAnimationFrame(() => {
+        uploadedFilesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
 
       for (const file of validFiles) {
         try {
@@ -972,271 +1488,8 @@ startxref
     document.addEventListener('mouseup', handleMouseUp);
   }, [sectionWidths]);
 
-  const UploadTab = () => (
-    <div className="h-full w-full flex flex-col">
-      {/* Mobile Upload Composition (< lg) */}
-      <div className="lg:hidden flex-1 flex min-h-0 w-full">
-        <MobileUploadView
-          handleDragOver={handleDragOver}
-          handleDragLeave={handleDragLeave}
-          handleDrop={handleDrop}
-          isDragging={isDragging}
-          fileInputRef={fileInputRef}
-          handleFileSelect={handleFileSelect}
-          handleTopicNameSubmit={handleTopicNameSubmit}
-          isSubmittingTopic={isSubmittingTopic}
-          handleTabChange={handleTabChange}
-          files={files}
-          uploadProgress={uploadProgress}
-          processingStatus={processingStatus}
-          successMessages={successMessages}
-          removeFile={removeFile}
-        />
-      </div>
-
-      {/* Desktop Upload Composition (>= lg) */}
-      <div className="hidden lg:flex flex-1 min-h-0 w-full bg-[#FAFAFC]">
-        <TutorSidebar
-          activeTab="upload"
-          handleTabChange={handleTabChange}
-          navigate={navigate}
-          fileName={null}
-        />
-
-        <div className="flex-1 min-h-0 overflow-y-auto p-10">
-          <div className="max-w-3xl mx-auto">
-            <h1 className="text-2xl font-bold text-slate-900 mb-1">Upload Documents</h1>
-            <p className="text-sm text-slate-500 mb-8">
-              Upload your study material and let LearnForge turn it into a personalized learning experience.
-            </p>
-
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-14 text-center transition-colors ${isDragging
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/40 bg-secondary/30"
-                }`}
-            >
-              {/* Decorative floating file-type chips */}
-              <div className="hidden sm:flex absolute top-8 left-10 w-11 h-11 rounded-xl bg-white shadow-md border border-rose-100 items-center justify-center -rotate-6">
-                <FileText className="w-5 h-5 text-rose-500" />
-              </div>
-              <div className="hidden sm:flex absolute bottom-10 left-20 w-11 h-11 rounded-xl bg-white shadow-md border border-blue-100 items-center justify-center rotate-6">
-                <FileType className="w-5 h-5 text-blue-500" />
-              </div>
-              <div className="hidden sm:flex absolute top-10 right-12 w-11 h-11 rounded-xl bg-white shadow-md border border-amber-100 items-center justify-center rotate-6">
-                <Presentation className="w-5 h-5 text-amber-500" />
-              </div>
-              <div className="hidden sm:flex absolute bottom-8 right-20 w-11 h-11 rounded-xl bg-white shadow-md border border-primary/10 items-center justify-center -rotate-6">
-                <FileText className="w-5 h-5 text-primary" />
-              </div>
-
-              <div className="relative mb-4">
-                <div className="w-16 h-16 rounded-2xl bg-primary/80 text-primary flex items-center justify-center mx-auto">
-                  <UploadCloud className={`w-8 h-8 ${isDragging ? "text-primary" : "text-primary"}`} />
-                </div>
-              </div>
-              <h3 className="relative text-xl font-bold text-slate-900 mb-1">
-                Drop your files here
-              </h3>
-              <p className="relative text-sm text-slate-500 mb-6">
-                or click to browse from your computer
-              </p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".pdf"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="relative px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all inline-flex items-center gap-2"
-              >
-                <FileText className="w-4 h-4" />
-                Select Files
-              </button>
-              <p className="relative text-xs text-slate-400 mt-4">You can upload multiple files at once</p>
-            </div>
-
-            {/* Divider */}
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200"></div>
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-[#FAFAFC] px-4 text-slate-400 font-semibold tracking-wider">
-                  OR
-                </span>
-              </div>
-            </div>
-
-            {/* Topic Input Box */}
-            <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shadow-md flex-shrink-0">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Don't have a PDF? Type a Topic Name</h3>
-                  <p className="text-xs text-slate-500">Instant AI learning module generation for any concept, subject, or question.</p>
-                </div>
-              </div>
-
-              <TopicInputForm onSubmit={handleTopicNameSubmit} isSubmitting={isSubmittingTopic} />
-            </div>
-
-            {files.length > 0 && (
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold text-foreground mb-4">
-                  Uploaded Files ({files.length})
-                </h3>
-                <div className="space-y-4">
-                  {files.map((file) => {
-                    const progress = uploadProgress[file.name] || 0;
-                    const isUploadComplete = progress >= 100;
-                    const status = processingStatus[file.name];
-                    const isProcessingComplete = status?.status === 'completed';
-                    const showSuccess = successMessages[file.name];
-
-                    return (
-                      <div
-                        key={file.name}
-                        className={`rounded-lg p-4 border transition-colors ${showSuccess
-                          ? "bg-green-50 border-green-200 hover:border-green-300"
-                          : "bg-muted/30 border-border hover:border-primary/30"
-                          }`}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              {showSuccess ? (
-                                <CheckCircle size={20} className="text-green-600" />
-                              ) : isUploadComplete ? (
-                                <div className="w-5 h-5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
-                              ) : (
-                                <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                              )}
-                              <span className="font-medium text-foreground break-all">
-                                {file.name}
-                              </span>
-                            </div>
-
-                            {showSuccess ? (
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
-                                  <CheckCircle size={16} />
-                                  <span>Processing completed successfully!</span>
-                                </div>
-                                <div className="text-xs text-green-600">
-                                  Your document has been analyzed and is ready for learning.
-                                </div>
-                              </div>
-                            ) : isUploadComplete ? (
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-sm text-blue-600">
-                                  <div className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
-                                  <span>Processing document...</span>
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  Analyzing content and generating explanations
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
-                                <span>•</span>
-                                <span>{Math.round(progress)}% uploaded</span>
-                              </div>
-                            )}
-
-                            {!showSuccess && (
-                              <div className="mt-2 w-full bg-muted rounded-full h-2">
-                                <div
-                                  className={`h-2 rounded-full transition-all duration-300 ${isUploadComplete ? "bg-blue-600" : "bg-primary"
-                                    }`}
-                                  style={{ width: `${progress}%` }}
-                                />
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => removeFile(file.name)}
-                            className="text-muted-foreground hover:text-primary transition-colors text-sm font-medium"
-                          >
-                            Remove
-                          </button>
-                        </div>
-
-                        {showSuccess && (
-                          <button
-                            onClick={() => handleTabChange("tutor")}
-                            className="mt-3 w-full py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-extrabold shadow-xs hover:opacity-95 transition-all flex items-center justify-center gap-1.5"
-                          >
-                            <span>Start AI Lesson Now →</span>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {files.some((f) => successMessages[f.name]) && (
-                  <button
-                    className="mt-6 w-full py-3.5 px-6 bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-extrabold text-sm shadow-md transition-all active:scale-98 flex items-center justify-center gap-2"
-                    onClick={() => handleTabChange("tutor")}
-                  >
-                    <span>Continue to AI Tutor</span>
-                    <Sparkles className="w-4 h-4 fill-current text-amber-300" />
-                  </button>
-                )}
-              </div>
-            )}
-
-            <div className="mt-8 rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-9 h-9 rounded-lg bg-primary/5 text-primary flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-4.5 h-4.5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 text-sm">Supported Formats</h4>
-                  <p className="text-xs text-slate-500">Upload files in the following formats. We'll analyze and structure your content automatically.</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="rounded-xl bg-rose-50/60 border border-rose-100 p-4">
-                  <div className="w-9 h-9 rounded-lg bg-white text-rose-500 flex items-center justify-center shadow-xs mb-3">
-                    <FileText className="w-4.5 h-4.5" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-900">PDF files</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Best for textbooks, lecture notes</p>
-                </div>
-                <div className="rounded-xl bg-emerald-50/60 border border-emerald-100 p-4">
-                  <div className="w-9 h-9 rounded-lg bg-white text-emerald-600 flex items-center justify-center shadow-xs mb-3">
-                    <FileType className="w-4.5 h-4.5" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-900">Max 50MB per file</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Upload multiple files at once</p>
-                </div>
-                <div className="rounded-xl bg-primary/60 border border-primary/10 p-4">
-                  <div className="w-9 h-9 rounded-lg bg-white text-primary flex items-center justify-center shadow-xs mb-3">
-                    <Library className="w-4.5 h-4.5" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-900">Multiple files</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Combine related materials</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   const LearningTab = ({ files }: { files: File[] }) => {
+    const { showToast } = useToast();
     const [referenceLinks, setReferenceLinks] = useState<ReferenceLink[]>([]);
     const [linksLoading, setLinksLoading] = useState(false);
     const [summaryText, setSummaryText] = useState<string>('');
@@ -1496,10 +1749,31 @@ startxref
       }
       setVideoLoading(true);
       setVideoError(null);
+      const requestedAt = Date.now();
       try {
+        // The backend now returns immediately (video generation runs in a
+        // background thread - it can take up to several minutes via Tavus)
+        // instead of blocking this request for the whole duration, which
+        // used to guarantee a 504 from any reverse proxy with a shorter
+        // timeout. Poll for the result here instead of a single check.
         await apiService.generateLipsyncVideo(fileName);
-        await loadLatestVideo(fileName);
 
+        const pollIntervalMs = 8000;
+        const timeoutMs = 5 * 60 * 1000; // matches the old synchronous wait
+        let found = false;
+        while (Date.now() - requestedAt < timeoutMs) {
+          await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+          const latest = await apiService.getLatestLipsyncVideo(fileName);
+          const createdAt = latest.created_at ? new Date(latest.created_at).getTime() : 0;
+          if (latest.video_url && createdAt >= requestedAt) {
+            setVideoUrl(latest.video_url);
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          setVideoError('Video is taking longer than expected - check back in a bit or tap Refresh.');
+        }
       } catch (error) {
         console.error('Failed to generate lipsync video:', error);
         setVideoError(error instanceof Error ? error.message : 'Failed to generate lipsync video');
@@ -1564,7 +1838,7 @@ startxref
         setAudioChunks([]);
       } catch (error) {
         console.error('Error starting recording:', error);
-        alert('Could not access microphone. Please check permissions.');
+        showToast('Could not access microphone. Please check permissions.', 'error');
       }
     };
 
@@ -1576,14 +1850,24 @@ startxref
     };
 
     const processVoiceInput = async (audioBlob: Blob) => {
+      // This used to silently default to a leftover test-data filename
+      // ('keph101.pdf') whenever no document was selected, injecting
+      // unrelated context into the answer instead of telling the user why.
+      if (!selectedFile) {
+        setChatMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          type: 'bot' as const,
+          content: 'Please select or upload a document first so I know what to answer questions about.',
+          timestamp: new Date(),
+        }]);
+        return;
+      }
       setIsProcessing(true);
       try {
         // Send audio to STT endpoint
         const formData = new FormData();
         formData.append('audio', audioBlob);
-        // Use the selected file for Q&A context
-        const fileName = selectedFile || 'keph101.pdf';
-        formData.append('fileName', fileName);
+        formData.append('fileName', selectedFile);
 
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/qa-voice`, {
           method: 'POST',
@@ -1640,6 +1924,25 @@ startxref
       const userMessage = (textToSend || currentMessage).trim();
       if (!userMessage) return;
 
+      // Same guard as processVoiceInput - don't silently fall back to a
+      // leftover test-data filename ('keph101.pdf') when no document is
+      // selected; tell the user instead of answering from the wrong context.
+      if (!selectedFile) {
+        setCurrentMessage('');
+        setChatMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          type: 'user' as const,
+          content: userMessage,
+          timestamp: new Date(),
+        }, {
+          id: (Date.now() + 1).toString(),
+          type: 'bot' as const,
+          content: 'Please select or upload a document first so I know what to answer questions about.',
+          timestamp: new Date(),
+        }]);
+        return;
+      }
+
       setIsProcessing(true);
       setCurrentMessage('');
 
@@ -1661,7 +1964,7 @@ startxref
           },
           body: JSON.stringify({
             question: userMessage,
-            fileName: selectedFile || 'keph101.pdf'
+            fileName: selectedFile
           }),
         });
 
@@ -1775,9 +2078,11 @@ startxref
           visibleImages.length > 0 && (
             <div className="grid grid-cols-2 gap-4 my-4">
               {visibleImages.map((imgUrl, idx) => (
-                <div
+                <button
                   key={`${keyPrefix}-${idx}`}
-                  className="rounded-lg overflow-hidden border border-gray-200 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                  type="button"
+                  aria-label="Enlarge diagram"
+                  className="rounded-lg overflow-hidden border border-gray-200 shadow-sm cursor-pointer hover:shadow-md transition-shadow text-left"
                   onClick={() => setZoomedImage(imgUrl)}
                 >
                   <img
@@ -1789,7 +2094,7 @@ startxref
                       setBrokenSummaryImages((prev) => new Set(prev).add(imgUrl))
                     }
                   />
-                </div>
+                </button>
               ))}
             </div>
           )
@@ -1916,12 +2221,12 @@ startxref
         return;
       }
       if (!summaryText) {
-        alert('No summary text available. Please wait for the summary to load.');
+        showToast('No summary text available. Please wait for the summary to load.', 'info');
         return;
       }
       const fileName = selectedFile || availableFiles[0] || undefined;
       if (!fileName) {
-        alert('Select or upload a document first.');
+        showToast('Select or upload a document first.', 'info');
         return;
       }
       setSummaryAudioState('loading');
@@ -1944,7 +2249,7 @@ startxref
         }
       } catch (error) {
         console.error('Failed to generate/play summary audio:', error);
-        alert(error instanceof Error ? error.message : 'Failed to generate audio. Please try again.');
+        showToast(error instanceof Error ? error.message : 'Failed to generate audio. Please try again.', 'error');
         setSummaryAudioState('idle');
       }
     };
@@ -2431,7 +2736,26 @@ startxref
       </div>
 
       <div className="flex-1 flex min-h-0 pb-16 lg:pb-0 relative">
-        {activeTab === "upload" && <UploadTab />}
+        {activeTab === "upload" && (
+          <UploadTab
+            handleDragOver={handleDragOver}
+            handleDragLeave={handleDragLeave}
+            handleDrop={handleDrop}
+            isDragging={isDragging}
+            fileInputRef={fileInputRef}
+            handleFileSelect={handleFileSelect}
+            handleTopicNameSubmit={handleTopicNameSubmit}
+            isSubmittingTopic={isSubmittingTopic}
+            handleTabChange={handleTabChange}
+            files={files}
+            uploadProgress={uploadProgress}
+            processingStatus={processingStatus}
+            successMessages={successMessages}
+            removeFile={removeFile}
+            navigate={navigate}
+            uploadedFilesRef={uploadedFilesRef}
+          />
+        )}
         {activeTab === "learning" && <LearningTab files={files} />}
         {activeTab === "assessment" && <AssessmentTab handleTabChange={handleTabChange} navigate={navigate} />}
         {activeTab === "tutor" && <TutorTab handleTabChange={handleTabChange} navigate={navigate} />}

@@ -18,6 +18,7 @@ import {
 import { apiService } from "@/lib/api";
 import { ChatMarkdown } from "./ChatMarkdown";
 import { useLiveSpeechPreview } from "@/hooks/useLiveSpeechPreview";
+import { useToast } from "@/lib/ToastContext";
 
 interface ChatMessage {
   id: string;
@@ -55,6 +56,7 @@ export function MobileTutorSheet({
   fileName,
   currentTopicTitle,
 }: MobileTutorSheetProps) {
+  const { showToast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -159,7 +161,7 @@ export function MobileTutorSheet({
       setIsRecording(true);
       liveSpeechPreview.start();
     } catch {
-      alert("Could not access microphone.");
+      showToast("Could not access microphone.", "error");
     }
   };
 

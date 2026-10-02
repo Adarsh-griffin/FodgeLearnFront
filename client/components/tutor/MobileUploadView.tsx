@@ -3,7 +3,8 @@ import {
   Upload,
   Sparkles,
   CheckCircle,
-  Check
+  Check,
+  XCircle
 } from "lucide-react";
 import { TutorLoadingScreen } from "./TutorLoadingScreen";
 
@@ -36,6 +37,7 @@ export function MobileUploadView({
   handleTabChange,
   files,
   uploadProgress,
+  processingStatus,
   successMessages,
   removeFile,
 }: MobileUploadViewProps) {
@@ -213,6 +215,7 @@ export function MobileUploadView({
               {files.map((file) => {
                 const progress = uploadProgress[file.name] || 0;
                 const showSuccess = successMessages[file.name];
+                const hasFailed = processingStatus[file.name]?.status === 'failed';
 
                 return (
                   <div
@@ -220,6 +223,8 @@ export function MobileUploadView({
                     className={`rounded-xl p-4 border transition-all text-xs sm:text-sm ${
                       showSuccess
                         ? "bg-emerald-50/80 border-emerald-200"
+                        : hasFailed
+                        ? "bg-rose-50/80 border-rose-200"
                         : "bg-white border-slate-200"
                     }`}
                   >
@@ -228,13 +233,19 @@ export function MobileUploadView({
                         <div className="flex items-center gap-2 mb-1">
                           {showSuccess ? (
                             <CheckCircle className="w-4.5 h-4.5 text-emerald-600 flex-shrink-0" />
+                          ) : hasFailed ? (
+                            <XCircle className="w-4.5 h-4.5 text-rose-600 flex-shrink-0" />
                           ) : (
                             <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />
                           )}
                           <span className="font-semibold text-slate-800 truncate">{file.name}</span>
                         </div>
-                        <p className="text-xs text-slate-500">
-                          {showSuccess ? "Ready for AI learning" : `${Math.round(progress)}% uploaded`}
+                        <p className={`text-xs ${hasFailed ? "text-rose-700" : "text-slate-500"}`}>
+                          {showSuccess
+                            ? "Ready for AI learning"
+                            : hasFailed
+                            ? (processingStatus[file.name]?.message || "Processing failed - try re-uploading.")
+                            : `${Math.round(progress)}% uploaded`}
                         </p>
                       </div>
 
@@ -245,15 +256,6 @@ export function MobileUploadView({
                         Remove
                       </button>
                     </div>
-
-                    {showSuccess && (
-                      <button
-                        onClick={() => handleTabChange("tutor")}
-                        className="mt-3 w-full py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-extrabold shadow-xs hover:opacity-95 transition-all flex items-center justify-center gap-1.5"
-                      >
-                        <span>Start AI Lesson Now →</span>
-                      </button>
-                    )}
                   </div>
                 );
               })}

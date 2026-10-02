@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { SignInButton, SignUpButton } from "@clerk/react";
-import { GraduationCap, X } from "lucide-react";
+import { SignInButton, SignUpButton, useAuth } from "@clerk/react";
+import { GraduationCap, X, Loader2 } from "lucide-react";
 import { getOrCreateAnonymousId } from "@/lib/identity";
 
 /**
@@ -17,6 +17,7 @@ export function AuthGateModal({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const { isLoaded } = useAuth();
 
   if (!isOpen) return null;
 
@@ -24,6 +25,18 @@ export function AuthGateModal({
     getOrCreateAnonymousId();
     onClose();
     navigate("/study");
+  };
+
+  // Clerk's SDK loads asynchronously - clicking Sign In/Create Account
+  // before isLoaded flips true was the main source of "sometimes it just
+  // doesn't do anything": SignInButton/SignUpButton render immediately but
+  // aren't actually wired up to open Clerk's modal until the SDK is ready.
+  // Defer our own onClose by a tick on top of that so React doesn't unmount
+  // this modal's DOM in the middle of the SAME click event Clerk's button
+  // is using to open ITS modal - both together is what made the failure
+  // intermittent rather than consistent.
+  const handleAuthButtonClick = () => {
+    setTimeout(onClose, 0);
   };
 
   return (
@@ -52,30 +65,37 @@ export function AuthGateModal({
           keep everything on this device only.
         </p>
 
-        <div className="flex flex-col gap-3">
-          <SignInButton mode="modal" forceRedirectUrl="/study">
+        {!isLoaded ? (
+          <div className="flex flex-col items-center gap-3 py-2">
+            <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
+            <p className="text-xs text-muted-foreground">Loading sign-in...</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <SignInButton mode="modal" forceRedirectUrl="/study">
+              <button
+                onClick={handleAuthButtonClick}
+                className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all"
+              >
+                Sign In
+              </button>
+            </SignInButton>
+            <SignUpButton mode="modal" forceRedirectUrl="/study">
+              <button
+                onClick={handleAuthButtonClick}
+                className="w-full px-6 py-3 bg-secondary text-secondary-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-colors"
+              >
+                Create Account
+              </button>
+            </SignUpButton>
             <button
-              onClick={onClose}
-              className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all"
+              onClick={handleGuest}
+              className="w-full px-6 py-3 text-muted-foreground rounded-xl font-medium hover:bg-muted transition-colors text-sm"
             >
-              Sign In
+              Continue as Guest
             </button>
-          </SignInButton>
-          <SignUpButton mode="modal" forceRedirectUrl="/study">
-            <button
-              onClick={onClose}
-              className="w-full px-6 py-3 bg-secondary text-secondary-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-colors"
-            >
-              Create Account
-            </button>
-          </SignUpButton>
-          <button
-            onClick={handleGuest}
-            className="w-full px-6 py-3 text-muted-foreground rounded-xl font-medium hover:bg-muted transition-colors text-sm"
-          >
-            Continue as Guest
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

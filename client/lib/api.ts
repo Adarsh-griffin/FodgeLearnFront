@@ -32,6 +32,7 @@ export interface QAResponse {
 
 export interface AssessmentQuestion {
   question: string;
+  fileName?: string;
 }
 
 export interface AssessmentFeedback {
@@ -60,6 +61,17 @@ export interface LipsyncVideoResponse {
   audio_url?: string | null;
   created_at?: string;
   updated_at?: string;
+}
+
+// /api/lipsync/generate now returns immediately (202) and runs the actual
+// (slow, up to 5 minutes) generation in a background thread, instead of
+// blocking the HTTP request for the whole duration - callers poll
+// getLatestLipsyncVideo() for the result (see apiService.generateLipsyncVideo).
+export interface LipsyncGenerateStartedResponse {
+  status: "generating";
+  folder: string;
+  message: string;
+  requested_at: string;
 }
 
 export interface ReferenceLink {
@@ -373,9 +385,13 @@ class ApiService {
     }
   }
 
-  // Generate assessment question
-  async generateAssessment(type: 'theoretical' | 'mcq' = 'theoretical'): Promise<AssessmentQuestion> {
-    const response = await fetch(`${this.baseURL}/api/assessment/generate?type=${type}`);
+  // Generate assessment question - scoped to fileName so questions match
+  // whichever document the student is actually viewing, not just whatever
+  // was uploaded most recently.
+  async generateAssessment(type: 'theoretical' | 'mcq' = 'theoretical', fileName?: string | null): Promise<AssessmentQuestion> {
+    const params = new URLSearchParams({ type });
+    if (fileName) params.set('fileName', fileName);
+    const response = await fetch(`${this.baseURL}/api/assessment/generate?${params.toString()}`);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -386,7 +402,7 @@ class ApiService {
   }
 
   // Submit assessment answer
-  async submitAssessment(question: string, answer: string): Promise<AssessmentFeedback> {
+  async submitAssessment(question: string, answer: string, fileName?: string | null): Promise<AssessmentFeedback> {
     const response = await fetch(`${this.baseURL}/api/assessment/submit`, {
       method: 'POST',
       headers: {
@@ -394,7 +410,8 @@ class ApiService {
       },
       body: JSON.stringify({
         question,
-        answer
+        answer,
+        fileName
       })
     });
 
@@ -535,7 +552,7 @@ class ApiService {
     return data;
   }
 
-  async generateLipsyncVideo(fileName?: string): Promise<LipsyncVideoResponse> {
+  async generateLipsyncVideo(fileName?: string): Promise<LipsyncGenerateStartedResponse> {
     const response = await fetch(`${this.baseURL}/api/lipsync/generate`, {
       method: 'POST',
       headers: {
@@ -549,9 +566,7 @@ class ApiService {
       throw new Error(errorData.error || 'Failed to generate lipsync video');
     }
 
-    const data: LipsyncVideoResponse = await response.json();
-    data.video_url = this.toAbsoluteUrl(data.video_url);
-    return data;
+    return response.json();
   }
 
   // Check processing status
